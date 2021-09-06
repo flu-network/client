@@ -10,10 +10,3 @@ type IndexRecord struct {
 	Sha1Hash     [20]byte
 	ProgressFile *ProgressFile
 }
-
-// indexRecordJSON is a private intermediaty representation of an IndexRecord for JSON encoding
-type indexRecordJSON struct {
-	FilePath    string
-	SizeInBytes int
-	Sha1Hash    [20]byte
-}

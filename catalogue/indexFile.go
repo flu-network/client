@@ -3,7 +3,13 @@ package catalogue
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 )
+
+const indexFileName = "index.json"
 
 // IndexFile is the in-memory representation of the index. The index maps the sha1 hash of a file
 // to the IndexRecord associated with that file.
@@ -16,11 +22,50 @@ type IndexFile struct {
 	index       map[[20]byte]IndexRecord
 }
 
-// indexFileJSON is a private intermediary representation of an IndexFile for JSON encoding
-type indexFileJSON struct {
-	Pid         int
-	LastTouched int64
-	Index       map[string]IndexRecord
+// Init attempts to safely claim ownnership of the index file if it already exists. If it
+// does not exist, an index file is created.
+func (ind *IndexFile) Init(dataDir string) error {
+	// ensure directory exists
+	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	// check the container is accessible and is a directory
+	fileInfo, err := os.Stat(dataDir)
+	if err != nil {
+		return err
+	}
+	if !fileInfo.IsDir() {
+		return fmt.Errorf("DataDir '%s' is not a directory", dataDir)
+	}
+
+	// ensure the file exists
+	indexFilePath := filepath.Join(dataDir, indexFileName)
+	if _, err := os.Stat(indexFilePath); os.IsNotExist(err) {
+		// create it if it doesn't exist
+		indexFile := IndexFile{
+			pid:         os.Getpid(),
+			lastTouched: time.Now().Unix(),
+			index:       map[[20]byte]IndexRecord{},
+		}
+		data, err := indexFile.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(indexFilePath, data, 0664)
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err := os.ReadFile(indexFilePath)
+	if err != nil {
+		return err
+	}
+
+	err = ind.UnmarshalJSON(data)
+	// TODO: assert ownership
+	return err
 }
 
 // MarshalJSON conforms to the Marshaler interface
@@ -62,4 +107,11 @@ func (ind *IndexFile) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// indexFileJSON is a private intermediary representation of an IndexFile for JSON encoding
+type indexFileJSON struct {
+	Pid         int
+	LastTouched int64
+	Index       map[string]IndexRecord
 }

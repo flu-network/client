@@ -2,8 +2,11 @@ package catalogue
 
 import (
 	"crypto/sha1"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestMarshalling(t *testing.T) {
@@ -40,6 +43,47 @@ func TestMarshalling(t *testing.T) {
 	if !reflect.DeepEqual(subject, result) {
 		t.Fatalf("Expected subject:\n%v\n to deep equal result:\n%v\n", subject, result)
 	}
+}
+
+func TestInit(t *testing.T) {
+	dataDir := filepath.Join(string(os.PathSeparator), "tmp", "flu-client", "catalogue")
+	parentDir := filepath.Join(string(os.PathSeparator), "tmp", "flu-client")
+	var cleanup = func() {
+		err := os.RemoveAll(parentDir)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	t.Run("Works when file does not already exist", func(t *testing.T) {
+		cleanup()
+		defer cleanup()
+		indexFile := &IndexFile{}
+		err := indexFile.Init(dataDir)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		now := time.Now().Unix()
+		if now-indexFile.lastTouched > 1000 {
+			t.Fatalf(
+				"Expected lastTouched to roughly match but %d is way over %d\n",
+				now, indexFile.lastTouched,
+			)
+		}
+
+		pid := os.Getpid()
+		if pid != indexFile.pid {
+			t.Fatalf("Expected pid to match but %d != %d\n", pid, indexFile.pid)
+		}
+
+		if len(indexFile.index) != 0 {
+			t.Fatalf("Expected fresh indexFile to have empty index but it wasn't\n")
+		}
+	})
+
+	// TODO: cover the unhappy cases
 }
 
 func sha1HashString(str string) *[20]byte {
