@@ -1,11 +1,13 @@
 package bitset
 
 const wordSize = 64
+const allOn = ^uint64(0)
 
 // Bitset is simple bitset backed by a []uint64. The size of the bitset is unbounded and it will
 // grow as required to support any Set() operations invoked. Bitset provides no compression.
 type Bitset struct {
 	data []uint64
+	size int
 }
 
 // NewBitset returns a new bitset of the specified size. Panics if size < 0. Providing a size is
@@ -14,7 +16,7 @@ func NewBitset(size int) *Bitset {
 	if size < 0 {
 		panic("Bitmaps cannot have a negative size")
 	}
-	result := Bitset{}
+	result := Bitset{size: size}
 
 	if size > 0 {
 		maxIndex := uint64(size - 1)
@@ -43,10 +45,43 @@ func (b *Bitset) Set(x uint64) {
 		b.data = append(b.data, make([]uint64, diff)...)
 	}
 	b.data[x/wordSize] |= (1 << (x % wordSize))
+	b.size = max(b.size, int(x)+1)
+}
+
+// Fill sets all items between 0:size to true.
+func (b *Bitset) Fill() {
+	if b.size == 0 {
+		return
+	}
+
+	maxOffset := (b.size - 1) / wordSize
+	for i := 0; i < maxOffset; i++ {
+		b.data[i] = allOn
+	}
+
+	lastIndex := (b.size - 1) % wordSize
+	b.data[maxOffset] = (((1 << lastIndex) - 1) << 1) | 1
+}
+
+// Full returns true if all items between 0:size are set to true, and false if not.
+func (b *Bitset) Full() bool {
+	if b.size == 0 {
+		return true
+	}
+
+	maxOffset := (b.size - 1) / wordSize
+	for i := 0; i < maxOffset; i++ {
+		if b.data[i] != allOn {
+			return false
+		}
+	}
+
+	lastIndex := (b.size - 1) % wordSize
+	return b.data[maxOffset] == (((1<<lastIndex)-1)<<1)|1
 }
 
 // Unset sets the specified index to False. If the specified index is out of bounds, nothing
-// happens.
+// happens. Does not cause size to shrink.
 func (b *Bitset) Unset(x uint64) {
 	offset := int(x) / wordSize
 	if offset >= len(b.data) {
@@ -89,4 +124,11 @@ func shorterFirst(a, b *Bitset) (*Bitset, *Bitset) {
 		return a, b
 	}
 	return b, a
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
