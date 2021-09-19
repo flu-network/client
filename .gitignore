@@ -16,3 +16,7 @@ client
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# VSCode artefacts
+__debug_bin
+.vscode
