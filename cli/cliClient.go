@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net/rpc"
 	"os"
@@ -44,8 +45,27 @@ func (c *Client) Run(cmdArgs []string) {
 		validate(err)
 		addReq := AddRequest{A: a, B: b}
 		addResp := AddResponse{}
-		client.Call("Methods.Add", &addReq, &addResp)
-		fmt.Printf("Added numbers: %v + %v = %v.\n", addReq.A, addReq.B, addResp.Response)
+		err = client.Call("Methods.Add", &addReq, &addResp)
+		if err != nil {
+			prettyPrintError(err)
+		} else {
+			fmt.Printf("Added numbers: %v + %v = %v.\n", addReq.A, addReq.B, addResp.Response)
+		}
+	case "share":
+		validateArgCount("Share", ShareRequest{}, args)
+		req := ShareRequest{Filepath: args[0]}
+		res := ShareResponse{}
+		err := client.Call("Methods.Share", &req, &res)
+		if err != nil {
+			prettyPrintError(err)
+		} else {
+			fmt.Printf(
+				"Shared file: %s\nHash: %s\nSize: %d\n",
+				res.FilePath,
+				hex.EncodeToString(res.Sha1Hash[:]),
+				res.SizeInBytes,
+			)
+		}
 	default:
 		fmt.Printf("Unknown command: %s\n", cmd)
 	}
@@ -71,4 +91,11 @@ func verify(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func prettyPrintError(err error) {
+	if err == nil {
+		panic("Cannot formal a nil error")
+	}
+	fmt.Printf("%s\n", err)
 }

@@ -23,17 +23,13 @@ func main() {
 		startDaemon()
 	} else {
 		argsWithoutProg := os.Args[1:]
-		enterCli(argsWithoutProg)
+		cli.NewClient(sockaddr).Run(argsWithoutProg)
 	}
 }
 
-func enterCli(args []string) {
-	cliClient := cli.NewClient(sockaddr)
-	cliClient.Run(args)
-}
-
 func startDaemon() {
-	cat := &catalogue.Cat{DataDir: catalogueDir}
+	cat, err := catalogue.NewCat(catalogueDir)
+	verify(err)
 	verify(cat.Init())
 	/*
 		TODO: set up harnessing: e.g.,

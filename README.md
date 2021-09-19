@@ -11,3 +11,11 @@ Indexes, hosts and downloads files over LANs
 - Compile with `go build .`
 - Start server `./client -d`
 - Run CLI command `./client add 1 2`
+
+### Test Indexing a file
+- `go build . && ./client -d`
+- `cat /usr/share/dict/words > /tmp/testFile.txt`
+- `go build . && ./client share ./`
+
+### TODO:
+- implement `flu list`
