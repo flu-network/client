@@ -3,6 +3,7 @@ package bitset
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"testing"
 )
@@ -171,4 +172,38 @@ func TestBitsetFillAndFull(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestSerialization(t *testing.T) {
+	for size := 9; size < 10000; size++ {
+
+		b1 := NewBitset(size)
+		// set roughly 10% of available slots
+		for i := 0; i < size/10; i++ {
+			b1.Set(uint64(rand.Intn(size)))
+		}
+
+		data := b1.Serialize()
+		b2, err := Deserialize(data)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if b1.size != b2.size {
+			t.Fatalf("Deserialized bitset size did not match original: %d != %d\n", b1.size, b2.size)
+		}
+
+		if reflect.DeepEqual(b1.data, b2.data) != true {
+			for i, b1Data := range b1.data {
+				b2Data := b2.data[i]
+				if b1Data != b2Data {
+					pos := fmt.Sprintf("Deserialization error at index %d\n", i)
+					l1 := fmt.Sprintf("Original: % 64b\n", b1Data)
+					l2 := fmt.Sprintf("Deserial: % 64b\n", b2Data)
+					t.Fatalf("%s%s%s", pos, l1, l2)
+				}
+			}
+		}
+	}
 }

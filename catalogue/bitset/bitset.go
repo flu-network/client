@@ -1,5 +1,10 @@
 package bitset
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
 const wordSize = 64
 const allOn = ^uint64(0)
 
@@ -118,7 +123,47 @@ func (b *Bitset) Intersect(a *Bitset) *Bitset {
 	return &Bitset{data: result}
 }
 
-// utilities
+// Serialize converts the bitset into a []byte so it can be transmitted somewhere. It makes a copy
+// of its underlying data, but is not threadsafe. If race conditions are possible it is the
+// caller's responsibility to maintain exclusivity.
+func (b *Bitset) Serialize() []byte {
+	sizeBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(sizeBytes, uint64(b.size))
+
+	rest := make([]byte, len(b.data)*8)
+	for i := 0; i < len(b.data); i++ {
+		byteIndex := i * 8
+		dest := rest[byteIndex : byteIndex+8]
+		binary.BigEndian.PutUint64(dest, b.data[i])
+	}
+
+	return append(sizeBytes, rest...)
+}
+
+// Deserialize converts a previously-serialized bitset into a realized bitset.
+func Deserialize(data []byte) (*Bitset, error) {
+	size := int(binary.BigEndian.Uint64(data[:8]))
+
+	if l := len(data[8:]); l%8 != 0 {
+		return nil, fmt.Errorf("Data segment of bitset data must be a multiple of 8. Got %d", l)
+	}
+
+	setData := make([]uint64, len(data[8:])/8)
+	for i := 0; i < len(setData); i++ {
+		byteIndex := 8 + (i * 8)
+		setData[i] = binary.BigEndian.Uint64(data[byteIndex : byteIndex+8])
+	}
+
+	return &Bitset{
+		data: setData,
+		size: size,
+	}, nil
+}
+
+/*
+Private utilities
+*/
+
 func shorterFirst(a, b *Bitset) (*Bitset, *Bitset) {
 	if len(a.data) < len(b.data) {
 		return a, b
