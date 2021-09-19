@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net/rpc"
 	"os"
@@ -54,17 +53,24 @@ func (c *Client) Run(cmdArgs []string) {
 	case "share":
 		validateArgCount("Share", ShareRequest{}, args)
 		req := ShareRequest{Filepath: args[0]}
-		res := ShareResponse{}
+		res := ListItem{}
 		err := client.Call("Methods.Share", &req, &res)
 		if err != nil {
 			prettyPrintError(err)
 		} else {
-			fmt.Printf(
-				"Shared file: %s\nHash: %s\nSize: %d\n",
-				res.FilePath,
-				hex.EncodeToString(res.Sha1Hash[:]),
-				res.SizeInBytes,
-			)
+			fmt.Print(res.Sprintf())
+		}
+	case "list":
+		validateArgCount("List", ListRequest{}, args)
+		req := ListRequest{}
+		res := ListResponse{Items: []ListItem{}}
+		err := client.Call("Methods.List", &req, &res)
+		if err != nil {
+			prettyPrintError(err)
+		} else {
+			for _, item := range res.Items {
+				fmt.Print(item.Sprintf())
+			}
 		}
 	default:
 		fmt.Printf("Unknown command: %s\n", cmd)
