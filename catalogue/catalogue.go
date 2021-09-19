@@ -68,3 +68,26 @@ func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
 
 	return record, nil
 }
+
+// ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
+// in their entirety. The result is a deep copy of the underlying catalogue data, so mutating it is
+// okay.
+func (c *Cat) ListFiles() ([]IndexRecord, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	result := make([]IndexRecord, 0, len(c.indexFile.index))
+
+	for _, rec := range c.indexFile.index {
+		if rec.ProgressFile == nil {
+			p, err := DeserializeProgressFile(&rec, c.DataDir)
+			if err != nil {
+				return nil, err
+			}
+			rec.ProgressFile = p
+		}
+		result = append(result, rec)
+	}
+
+	return result, nil
+}

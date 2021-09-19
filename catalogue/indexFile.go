@@ -115,7 +115,8 @@ func (ind *IndexFile) MarshalJSON() ([]byte, error) {
 	return json.Marshal(intermediary)
 }
 
-// UnmarshalJSON conforms to the Marshaler interface
+// UnmarshalJSON conforms to the Marshaler interface. Does not fill out pointers to the underlying
+// ProgressFiles within individual IndexRecords.
 func (ind *IndexFile) UnmarshalJSON(data []byte) error {
 	intermediary := indexFileJSON{}
 	err := json.Unmarshal(data, &intermediary)
