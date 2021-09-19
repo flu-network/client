@@ -32,6 +32,24 @@ func NewBitset(size int) *Bitset {
 	return &result
 }
 
+// Size returns the number of elements in the bitset, both set and unset. Size is always
+// non-negative
+func (b *Bitset) Size() int {
+	return b.size
+}
+
+// Count returns the number of elements in the bitset that are set (true)
+func (b *Bitset) Count() int {
+	result := uint64(0)
+	for _, unit := range b.data {
+		for unit > 0 {
+			result += (unit & 1)
+			unit = unit >> 1
+		}
+	}
+	return int(result)
+}
+
 // Get returns true if the specified index has been previously set and never subsequently unset.
 // Safely false if the specified index is out of bounds.
 func (b *Bitset) Get(x uint64) bool {

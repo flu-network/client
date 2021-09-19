@@ -174,6 +174,49 @@ func TestBitsetFillAndFull(t *testing.T) {
 	})
 }
 
+func TestCount(t *testing.T) {
+	t.Run("Count() does not basics/mutation", func(t *testing.T) {
+		b1 := NewBitset(100)
+
+		// empty case
+		if c := b1.Count(); c != 0 {
+			t.Fatalf("New bitset should have count() == 0. Got %d\n", c)
+		}
+
+		// set twice and check that it works
+		b1.Set(0)
+		b1.Set(99)
+		if c := b1.Count(); c != 2 {
+			t.Fatalf("Count inaccurate: Expected %d but got %d\n", 2, c)
+		}
+
+		// do it again, just to make sure that count()ing didn't mutate anything.
+		if c := b1.Count(); c != 2 {
+			t.Fatalf("Count inaccurate: Expected %d but got %d\n", 2, c)
+		}
+	})
+
+	t.Run("Count() accuracy", func(t *testing.T) {
+		sizes := []int{31}
+
+		for _, size := range sizes {
+			b1 := NewBitset(size)
+			setCount := 0
+			// set roughly 10% of available slots
+			for i := 0; i < size/10; i++ {
+				if !b1.Get(uint64(i)) {
+					b1.Set(uint64(rand.Intn(size)))
+					setCount++
+				}
+			}
+
+			if c := b1.Count(); setCount != c {
+				t.Fatalf("Count inaccurate at size %d: Expected %d but got %d\n", size, setCount, c)
+			}
+		}
+	})
+}
+
 func TestSerialization(t *testing.T) {
 	for size := 9; size < 10000; size++ {
 
@@ -191,7 +234,8 @@ func TestSerialization(t *testing.T) {
 		}
 
 		if b1.size != b2.size {
-			t.Fatalf("Deserialized bitset size did not match original: %d != %d\n", b1.size, b2.size)
+			t.Fatalf("Deserialized bitset size did not match original: %d != %d\n",
+				b1.size, b2.size)
 		}
 
 		if reflect.DeepEqual(b1.data, b2.data) != true {
