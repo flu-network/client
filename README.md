@@ -15,7 +15,25 @@ Indexes, hosts and downloads files over LANs
 ### Test Indexing a file
 - `go build . && ./client -d`
 - `cat /usr/share/dict/words > /tmp/testFile.txt`
-- `go build . && ./client share ./`
+- `go build . && ./client share /tmp/testFile.txt`
+
+### Test Listing files
+- `go build . && ./client -d`
+- `go build . && ./client list`
 
 ### TODO:
-- implement `flu list`
+- implement `flu tcpget host sha1hash`
+    - use port binary.BigEndian.Uint16([]byte{"F", "0"}) as UDP port
+    - use port binary.BigEndian.Uint16([]byte{"F", "1"}) as TCP port
+    - add a TCP listener inside main(), waiting for msg containing sha1 hash
+        - on receipt, check integrity, then just send the whole file
+        - use reference: https://mrwaggel.be/post/golang-transfer-a-file-over-a-tcp-socket/
+        - this is our first benchmark 😨
+    - setup Anna's laptop with rsync (for code) as a second client
+        - use `brew install inetutils`
+        - set up ftp servers on both machines
+        - this is our second benchmark 😰
+    - use some bash scripting to automatically run our benchmarks from personal macbook
+
+### Local Dev notes:
+- use `fn + f5` to run the client with debugging enabled in daemon mode
