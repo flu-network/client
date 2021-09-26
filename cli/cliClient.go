@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net/rpc"
 	"os"
 	"reflect"
 	"strconv"
+
+	transfertcp "github.com/flu-network/client/transferTCP"
 )
 
 // Client is the entrypoint for code that runs on the CLI process. The user types commands
@@ -72,6 +75,21 @@ func (c *Client) Run(cmdArgs []string) {
 				fmt.Print(item.Sprintf())
 			}
 		}
+	// gettcp is used as a quick-and-dirty way to transfer a file over TCP to establish a benchmark.
+	// It is distinct from other CLI methods in that the CLI process lives until the transfer is
+	// complete.
+	case "gettcp":
+		validateArgCount("GetTCP", GetRequest{}, args)
+		strHash, err := hex.DecodeString(args[0])
+		validate(err)
+		if len(strHash) != 20 {
+			validate(fmt.Errorf("Expected 20 byte hash but got %d", len(strHash)))
+		}
+
+		hashArray := [20]byte{}
+		copy(hashArray[:], strHash)
+		transfertcp.GetFile(hashArray)
+
 	default:
 		fmt.Printf("Unknown command: %s\n", cmd)
 	}
@@ -101,7 +119,7 @@ func verify(err error) {
 
 func prettyPrintError(err error) {
 	if err == nil {
-		panic("Cannot formal a nil error")
+		panic("Cannot format a nil error")
 	}
 	fmt.Printf("%s\n", err)
 }

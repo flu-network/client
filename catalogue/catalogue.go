@@ -1,6 +1,7 @@
 package catalogue
 
 import (
+	"fmt"
 	"path/filepath"
 	"sync"
 )
@@ -90,4 +91,25 @@ func (c *Cat) ListFiles() ([]IndexRecord, error) {
 	}
 
 	return result, nil
+}
+
+// Contains returns the indexRecord of the file specified by the hash, or an error if the file
+// cannot be accessed for any reason.
+func (c *Cat) Contains(hash [20]byte) (IndexRecord, error) {
+	if record, found := c.indexFile.index[hash]; found {
+		result, err := c.fill(&record)
+		return *result, err
+	}
+	return IndexRecord{}, fmt.Errorf("File not found")
+}
+
+func (c *Cat) fill(rec *IndexRecord) (*IndexRecord, error) {
+	if rec.ProgressFile == nil {
+		p, err := DeserializeProgressFile(rec, c.DataDir)
+		if err != nil {
+			return rec, err
+		}
+		rec.ProgressFile = p
+	}
+	return rec, nil
 }
