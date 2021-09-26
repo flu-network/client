@@ -1,12 +1,13 @@
 package catalogue
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/flu-network/client/common"
 )
 
 const indexFileName = "index.json"
@@ -20,7 +21,7 @@ type IndexFile struct {
 	// owner is expected update the file's lastTouched every few seconds (<< 30)
 	pid         int
 	lastTouched int64 // should be updated regularly by the owner
-	index       map[[20]byte]IndexRecord
+	index       map[common.Sha1Hash]IndexRecord
 	dataDir     string
 }
 
@@ -49,7 +50,7 @@ func (ind *IndexFile) Init(dataDir string) error {
 			// create it if it doesn't exist
 			ind.pid = os.Getpid()
 			ind.lastTouched = time.Now().Unix()
-			ind.index = map[[20]byte]IndexRecord{}
+			ind.index = map[common.Sha1Hash]IndexRecord{}
 			ind.dataDir = dataDir
 
 			err := ind.save()
@@ -108,8 +109,7 @@ func (ind *IndexFile) MarshalJSON() ([]byte, error) {
 	}
 
 	for hash, indexRecord := range ind.index {
-		strHash := hex.EncodeToString(hash[:])
-		intermediary.Index[strHash] = *indexRecord.toJSON()
+		intermediary.Index[hash.String()] = *indexRecord.toJSON()
 	}
 
 	return json.Marshal(intermediary)
@@ -126,23 +126,21 @@ func (ind *IndexFile) UnmarshalJSON(data []byte) error {
 
 	ind.pid = intermediary.Pid
 	ind.lastTouched = intermediary.LastTouched
-	ind.index = make(map[[20]byte]IndexRecord)
+	ind.index = make(map[common.Sha1Hash]IndexRecord)
 	ind.dataDir = intermediary.DataDir
 
 	for str, indexRecord := range intermediary.Index {
-		strHash, err := hex.DecodeString(str)
+		hash := common.Sha1Hash{}
+		err := hash.FromStringSafe(str)
 		if err != nil {
 			return err
 		}
-
-		strHashArray := [20]byte{}
-		copy(strHashArray[:], strHash)
 
 		decoded, err := indexRecord.fromJSON()
 		if err != nil {
 			return err
 		}
-		ind.index[strHashArray] = *decoded
+		ind.index[hash] = *decoded
 	}
 
 	return nil

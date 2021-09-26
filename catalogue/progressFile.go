@@ -1,7 +1,6 @@
 package catalogue
 
 import (
-	"encoding/hex"
 	"os"
 	"path/filepath"
 
@@ -29,7 +28,7 @@ func NewProgressFile(record *IndexRecord, dataDir string) *ProgressFile {
 	set.Fill()
 	return &ProgressFile{
 		Progress: set,
-		FilePath: filepath.Join(dataDir, hex.EncodeToString(record.Sha1Hash[:])),
+		FilePath: filepath.Join(dataDir, record.Sha1Hash.String()),
 	}
 }
 
@@ -46,7 +45,7 @@ func (p *ProgressFile) save() error {
 
 // DeserializeProgressFile reads bytes on disk into an in-memory progressFile.
 func DeserializeProgressFile(record *IndexRecord, dataDir string) (*ProgressFile, error) {
-	progressFilePath := filepath.Join(dataDir, hex.EncodeToString(record.Sha1Hash[:]))
+	progressFilePath := filepath.Join(dataDir, record.Sha1Hash.String())
 
 	data, err := os.ReadFile(progressFilePath)
 	if err != nil {

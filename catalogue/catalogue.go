@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+
+	"github.com/flu-network/client/common"
 )
 
 // Cat is a wrapper around the on-disk catalogue data for Flu clients. There should only be one
@@ -95,8 +97,8 @@ func (c *Cat) ListFiles() ([]IndexRecord, error) {
 
 // Contains returns the indexRecord of the file specified by the hash, or an error if the file
 // cannot be accessed for any reason.
-func (c *Cat) Contains(hash [20]byte) (IndexRecord, error) {
-	if record, found := c.indexFile.index[hash]; found {
+func (c *Cat) Contains(hash *common.Sha1Hash) (IndexRecord, error) {
+	if record, found := c.indexFile.index[*hash]; found {
 		result, err := c.fill(&record)
 		return *result, err
 	}

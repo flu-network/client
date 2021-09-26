@@ -3,9 +3,10 @@ package catalogue
 import (
 	"bufio"
 	"crypto/sha1"
-	"encoding/hex"
 	"os"
 	"path/filepath"
+
+	"github.com/flu-network/client/common"
 )
 
 const defaultChunkSize = int(1 << 22) // 4mb in bytes
@@ -18,7 +19,7 @@ const defaultChunkSize = int(1 << 22) // 4mb in bytes
 type IndexRecord struct {
 	FilePath     string
 	SizeInBytes  int64
-	Sha1Hash     [20]byte
+	Sha1Hash     common.Sha1Hash
 	ProgressFile *ProgressFile
 	ChunkSize    int
 }
@@ -52,7 +53,7 @@ func generateIndexRecordForFile(path string) (*IndexRecord, error) {
 // hashFile returns a 20-array slice representing the sha1 hash of the file's contents or an error.
 // TODO: come up with some sort of async/progress-bar method because at 500mbps of disk throughput
 // this could take 10 seconds for a 5GB file, and 1.5 minutes for a 50GB file.
-func hashFile(path string) (*[20]byte, error) {
+func hashFile(path string) (*common.Sha1Hash, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -63,9 +64,7 @@ func hashFile(path string) (*[20]byte, error) {
 		h.Write(s.Bytes())
 	}
 
-	hashArray := new([20]byte)
-	copy(hashArray[:], h.Sum(nil))
-	return hashArray, nil
+	return (&common.Sha1Hash{}).FromSlice(h.Sum(nil)), nil
 }
 
 // toJSON returns an indexRecordJSON, which can natively be marshalled into JSON
@@ -73,7 +72,7 @@ func (ir *IndexRecord) toJSON() *indexRecordJSON {
 	return &indexRecordJSON{
 		FilePath:    ir.FilePath,
 		SizeInBytes: ir.SizeInBytes,
-		Sha1Hash:    hex.EncodeToString(ir.Sha1Hash[:]),
+		Sha1Hash:    ir.Sha1Hash.String(),
 		ChunkSize:   ir.ChunkSize,
 	}
 }
@@ -83,17 +82,15 @@ func (irj *indexRecordJSON) fromJSON() (*IndexRecord, error) {
 	result := IndexRecord{
 		FilePath:     irj.FilePath,
 		SizeInBytes:  irj.SizeInBytes,
-		Sha1Hash:     [20]byte{},
+		Sha1Hash:     common.Sha1Hash{},
 		ProgressFile: nil,
 		ChunkSize:    irj.ChunkSize,
 	}
 
-	hash, err := hex.DecodeString(irj.Sha1Hash)
+	err := result.Sha1Hash.FromStringSafe(irj.Sha1Hash)
 	if err != nil {
 		return nil, err
 	}
-	copy(result.Sha1Hash[:], hash)
-
 	return &result, nil
 }
 

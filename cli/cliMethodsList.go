@@ -25,7 +25,7 @@ func (m *Methods) List(req *ListRequest, resp *ListResponse) error {
 		resp.Items[i] = ListItem{
 			FilePath:         rec.FilePath,
 			SizeInBytes:      rec.SizeInBytes,
-			Sha1Hash:         rec.Sha1Hash,
+			Sha1Hash:         *rec.Sha1Hash.Array(),
 			ChunkCount:       rec.ProgressFile.Progress.Size(),
 			ChunkSizeInBytes: rec.ChunkSize,
 			ChunksDownloaded: rec.ProgressFile.Progress.Count(),

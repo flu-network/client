@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/hex"
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -25,8 +26,10 @@ type ListItem struct {
 
 // Sprintf returns a pretty-printed, user-facing string representation of a ListItem
 func (li *ListItem) Sprintf() string {
+	_, fileName := path.Split(li.FilePath)
 	output := []string{
-		fmt.Sprintf("%s\n", li.FilePath),
+		fmt.Sprintf("%s\n", fileName),
+		fmt.Sprintf("	Path: %s\n", li.FilePath),
 		fmt.Sprintf("	Size (bytes): %d\n", li.SizeInBytes),
 		fmt.Sprintf("	Sha1 Hash: %s\n", hex.EncodeToString(li.Sha1Hash[:])),
 		fmt.Sprintf("	Chunk Count: %d\n", li.ChunkCount),
@@ -54,7 +57,7 @@ func (m *Methods) Share(req *ShareRequest, resp *ListItem) error {
 	}
 	resp.FilePath = record.FilePath
 	resp.SizeInBytes = record.SizeInBytes
-	resp.Sha1Hash = record.Sha1Hash
+	resp.Sha1Hash = *record.Sha1Hash.Array()
 	resp.ChunkCount = record.ProgressFile.Progress.Size()
 	resp.ChunkSizeInBytes = record.ChunkSize
 	resp.ChunksDownloaded = record.ProgressFile.Progress.Count()

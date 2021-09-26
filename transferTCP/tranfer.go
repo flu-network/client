@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/flu-network/client/catalogue"
+	"github.com/flu-network/client/common"
 )
 
 // bufferSize is the default buffer size to use for a tcp transfer
@@ -19,8 +20,8 @@ const bufferSize = 1024
 func SendFile(connection net.Conn, cat *catalogue.Cat) error {
 	defer connection.Close()
 
-	hash := make([]byte, 20)
-	byteCount, err := connection.Read(hash)
+	hash := common.Sha1Hash{}
+	byteCount, err := connection.Read(hash.Slice())
 	if err != nil {
 		return err
 	}
@@ -29,10 +30,7 @@ func SendFile(connection net.Conn, cat *catalogue.Cat) error {
 		check(fmt.Errorf("Expected 20 byte hash but received %d", byteCount))
 	}
 
-	hashArray := [20]byte{}
-	copy(hashArray[:], hash)
-
-	rec, err := cat.Contains(hashArray)
+	rec, err := cat.Contains(&hash)
 	if err != nil {
 		return err
 	}
@@ -82,13 +80,13 @@ func fillString(retunString string, toLength int) string {
 }
 
 // GetFile just accepts whatever the server sends and saves it to ~/Downloads.
-func GetFile(sha1Hash [20]byte) {
+func GetFile(hash *common.Sha1Hash) {
 	connection, err := net.Dial("tcp", "localhost:17969")
 	if err != nil {
 		panic(err)
 	}
 	defer connection.Close()
-	connection.Write(sha1Hash[:])
+	connection.Write(hash.Slice())
 
 	fmt.Println("Connected to server, start receiving the file name and file size")
 	bufferFileName := make([]byte, 64)

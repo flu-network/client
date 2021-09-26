@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/flu-network/client/common"
 )
 
 func TestMarshalling(t *testing.T) {
@@ -14,7 +16,7 @@ func TestMarshalling(t *testing.T) {
 	subject := IndexFile{
 		pid:         10293,
 		lastTouched: 1630892423,
-		index:       map[[20]byte]IndexRecord{},
+		index:       map[common.Sha1Hash]IndexRecord{},
 	}
 	subject.index[*sha1HashString("cat")] = IndexRecord{
 		FilePath:     "path/to/file1.dat",
@@ -86,9 +88,9 @@ func TestInit(t *testing.T) {
 	// TODO: cover the unhappy cases
 }
 
-func sha1HashString(str string) *[20]byte {
+func sha1HashString(str string) *common.Sha1Hash {
 	sha1A := sha1.New()
 	sha1A.Write([]byte(str))
-	resultSlice := sha1A.Sum(nil)
-	return (*[20]byte)(resultSlice)
+	result := common.Sha1Hash{}
+	return result.FromSlice(sha1A.Sum(nil))
 }

@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net/rpc"
 	"os"
 	"reflect"
 	"strconv"
 
+	"github.com/flu-network/client/common"
 	transfertcp "github.com/flu-network/client/transferTCP"
 )
 
@@ -80,15 +80,10 @@ func (c *Client) Run(cmdArgs []string) {
 	// complete.
 	case "gettcp":
 		validateArgCount("GetTCP", GetRequest{}, args)
-		strHash, err := hex.DecodeString(args[0])
+		hash := common.Sha1Hash{}
+		err := hash.FromStringSafe(args[0])
 		validate(err)
-		if len(strHash) != 20 {
-			validate(fmt.Errorf("Expected 20 byte hash but got %d", len(strHash)))
-		}
-
-		hashArray := [20]byte{}
-		copy(hashArray[:], strHash)
-		transfertcp.GetFile(hashArray)
+		transfertcp.GetFile(&hash)
 
 	default:
 		fmt.Printf("Unknown command: %s\n", cmd)
