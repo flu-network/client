@@ -71,9 +71,24 @@ func (c *Client) Run(cmdArgs []string) {
 		if err != nil {
 			prettyPrintError(err)
 		} else {
-			for _, item := range res.Items {
-				fmt.Print(item.Sprintf())
-			}
+			fmt.Print(res.Sprintf())
+		}
+	case "chims":
+		req := ChimRequest{}
+		res := ChimResponseList{}
+		hash := common.Sha1Hash{}
+		if len(args) > 0 {
+			err := hash.FromStringSafe(args[0])
+			validate(err)
+			req.Sha1Hash = *hash.Array()
+		} else {
+			req.Sha1Hash = *hash.Blank().Array()
+		}
+		err := client.Call("Methods.Chims", &req, &res)
+		if err != nil {
+			prettyPrintError(err)
+		} else {
+			fmt.Print(res.Sprintf())
 		}
 	// gettcp is used as a quick-and-dirty way to transfer a file over TCP to establish a benchmark.
 	// It is distinct from other CLI methods in that the CLI process lives until the transfer is

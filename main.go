@@ -10,13 +10,15 @@ import (
 
 	"github.com/flu-network/client/catalogue"
 	"github.com/flu-network/client/cli"
+	"github.com/flu-network/client/flu"
 	transfertcp "github.com/flu-network/client/transferTCP"
 )
 
 // Defaults. Can be overridden by user
 var catalogueDir = "/usr/local/var/flu-network/catalogue" // TODO: make cross-platform
 var sockaddr = "/tmp/flu-network.sock"                    // for cli communication
-var tcpPort = 17969                                       // port 'f1' in hex
+var tcpPort = 61697                                       // port 'f1' in hex
+var udpPort = 61696                                       // port "f100" in hex
 
 func main() {
 	daemonMode := flag.Bool("d", false, "-d")
@@ -61,7 +63,8 @@ func startDaemon() {
 	}()
 
 	go func() {
-		// TODO: Expose p2p interface
+		go flu.Listen(cat)
+		flu.Send()
 	}()
 
 	// expose TCP interface. Only for benchmarking.

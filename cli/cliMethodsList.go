@@ -1,5 +1,7 @@
 package cli
 
+import "strings"
+
 // ListRequest contains the information necessary for the daemon to find, hash, index and List the
 // file pointed to by FilePath.
 type ListRequest struct{}
@@ -9,6 +11,15 @@ type ListRequest struct{}
 // listed have been completely downloaded.
 type ListResponse struct {
 	Items []ListItem
+}
+
+// Sprintf returns a pretty-printed, user-facing string representation of a ListResponse
+func (lr *ListResponse) Sprintf() string {
+	var b strings.Builder
+	for _, item := range lr.Items {
+		b.WriteString(item.Sprintf())
+	}
+	return b.String()
 }
 
 // List lists the files that have been indexed by the daemon. Not all indexed files have been

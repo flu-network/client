@@ -81,7 +81,7 @@ func fillString(retunString string, toLength int) string {
 
 // GetFile just accepts whatever the server sends and saves it to ~/Downloads.
 func GetFile(hash *common.Sha1Hash) {
-	connection, err := net.Dial("tcp", "localhost:17969")
+	connection, err := net.Dial("tcp", "localhost:61697")
 	if err != nil {
 		panic(err)
 	}

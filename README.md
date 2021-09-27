@@ -26,12 +26,29 @@ Indexes, hosts and downloads files over LANs
 
 ### TODO:
 - implement `flu tcpget host sha1hash`
-    [ ] use port binary.BigEndian.Uint16([]byte{"F", "0"}) as UDP port
+    [x] use port binary.BigEndian.Uint16([]byte{"F", "0"}) as UDP port
     [x] use port binary.BigEndian.Uint16([]byte{"F", "1"}) as TCP port
     [x] add a TCP listener inside main(), waiting for msg containing sha1 hash
-        [x] on receipt, check integrity, then just send the whole file
+        [x] on receipt just send the whole file
         [x] use reference: https://mrwaggel.be/post/golang-transfer-a-file-over-a-tcp-socket/
         - this is our first benchmark 😨
+
+- Get test script working (~/Documents/code/bradfield/csi/flu/client/scripts/hostDiscovery.sh)
+    [ ] compile
+    [ ] copy binary
+    [ ] clear remote index
+    [ ] rebuild remote index
+    [ ] start remote daemon
+    [ ] start local daemon
+    [ ] run `flu chims` successfully (see below first)
+
+
+- implement host discovery so we can do tcpget over LAN instead of just localhost
+    [ ] complete CLI method chims
+        - CLI -> daemon (via RPC) -> remote hosts (via UDP)
+        - reference https://ops.tips/blog/udp-client-and-server-in-go/ for UDP OS-level goodies
+
+- Second FTP benchmark:
     [x] setup Anna's laptop with rsync (for code) as a second client
         [ ] use `brew install inetutils`
         [ ] set up ftp servers on both machines

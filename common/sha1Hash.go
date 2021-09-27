@@ -81,3 +81,12 @@ func (h *Sha1Hash) FromSliceSafe(s []byte) error {
 	copy(h.data[:], s)
 	return nil
 }
+
+// Blank overwrites the underlying hash to FF...FF. Used through out flu as the 'null' hash. Returns
+// itself.
+func (h *Sha1Hash) Blank() *Sha1Hash {
+	for i := 0; i < 20; i++ {
+		h.data[i] = 255
+	}
+	return h
+}
