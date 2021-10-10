@@ -22,10 +22,12 @@ func Parse(data []byte) (msg Message, err error) {
 		reqID := reader.readUint16()
 		addr := reader.readBytes(4)
 		port := reader.readUint16()
+		chunks := reader.readSliceUint16()
 		return &DiscoverHostResponse{
 			Address:   [4]byte{addr[0], addr[1], addr[2], addr[3]},
 			Port:      port,
 			RequestID: reqID,
+			Chunks:    chunks,
 		}, nil
 
 	default:

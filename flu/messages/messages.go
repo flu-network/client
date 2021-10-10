@@ -49,8 +49,8 @@ func (r *DiscoverHostRequest) Serialize() []byte {
 		index := i * 2
 		binary.BigEndian.PutUint16(chunks[index:index+2], chunkVal)
 	}
-
 	result = append(result, chunks...)
+
 	return result
 }
 
@@ -69,11 +69,12 @@ type DiscoverHostResponse struct {
 	Address   [4]byte
 	Port      uint16
 	RequestID uint16
+	Chunks    []uint16 // Chunks are only returned if a file is specified in the request
 }
 
 // Serialize converts its subject into a []byte for transmission over the wire
 func (r *DiscoverHostResponse) Serialize() []byte {
-	result := make([]byte, 9)
+	result := make([]byte, 10)
 
 	// message type
 	result[0] = discoverHostResponse
@@ -86,6 +87,17 @@ func (r *DiscoverHostResponse) Serialize() []byte {
 
 	// port
 	binary.BigEndian.PutUint16(result[7:9], r.Port)
+
+	// chunk count
+	result[9] = uint8(len(r.Chunks))
+
+	// chunks
+	chunks := make([]byte, len(r.Chunks)*2)
+	for i, chunkVal := range r.Chunks {
+		index := i * 2
+		binary.BigEndian.PutUint16(chunks[index:index+2], chunkVal)
+	}
+	result = append(result, chunks...)
 
 	return result
 }

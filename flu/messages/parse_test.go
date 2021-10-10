@@ -30,6 +30,7 @@ func TestDiscoverHostResponse(t *testing.T) {
 		Address:   [4]byte{192, 168, 86, 34},
 		Port:      61690,
 		RequestID: 45678,
+		Chunks:    []uint16{},
 	}
 
 	serialized := msg.Serialize()
