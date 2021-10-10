@@ -1,4 +1,4 @@
-package flu
+package messages
 
 import (
 	"encoding/binary"
@@ -6,37 +6,9 @@ import (
 	"github.com/flu-network/client/common"
 )
 
-// import "fmt"
-
-// // Message is a clever wrapper around a []byte.
-// type Message struct {
-// 	data []byte
-// }
-
-// func (m *Message) decode() (interface{}, error) {
-// 	messageType, data := m.data[0], m.data[1:]
-
-// 	switch messageType {
-// 	case discoverHostRequest:
-// 		// todo
-// 	case discoverHostResponse:
-// 		// todo
-// 	}
-// 	return nil, fmt.Errorf("Unknown message type %d", m.messageType)
-// }
-
-// type FluMessage interface {
-// 	schama() []uint8
-// }
-
-// const (
-// 	dataTypeSha1Hash    = uint8(iota)
-// 	dataTypeUint16      = uint8(iota)
-// 	dataTypeSliceUint16 = uint8(iota)
-// )
-
 // byteReader is a wrapper around a []byte that makes it easier to parse things if you know what
-// data to expect
+// data to expect. For example, if you know the message contains two uint8s and a sha1Hash you could
+// just call br.readByte(); br.readByte(); br.readSha1Hash() in that order.
 type byteReader struct {
 	Data  []byte
 	index int

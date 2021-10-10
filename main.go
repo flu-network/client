@@ -11,14 +11,13 @@ import (
 	"github.com/flu-network/client/catalogue"
 	"github.com/flu-network/client/cli"
 	"github.com/flu-network/client/flu"
-	transfertcp "github.com/flu-network/client/transferTCP"
 )
 
 // Defaults. Can be overridden by user
-var catalogueDir = "/usr/local/var/flu-network/catalogue" // TODO: make cross-platform
-var sockaddr = "/tmp/flu-network.sock"                    // for cli communication
-var tcpPort = 61697                                       // port 'f1' in hex
-var udpPort = 61696                                       // port "f100" in hex
+const catalogueDir = "/usr/local/var/flu-network/catalogue" // TODO: make cross-platform
+const sockaddr = "/tmp/flu-network.sock"                    // for cli communication
+const tcpPort = 61697                                       // port 'f101' in hex
+const udpPort = 61696                                       // port "f100" in hex
 
 func main() {
 	daemonMode := flag.Bool("d", false, "-d")
@@ -38,13 +37,14 @@ func startDaemon() {
 	cat, err := catalogue.NewCat(catalogueDir)
 	failHard(err)
 	failHard(cat.Init())
+	fluServer := flu.NewServer(udpPort, cat)
 	/*
 		TODO: set up harnessing: e.g.,
 			- handle OS signals properly
 			- set up channels for control signals between goroutines
 	*/
 
-	// Expose CLI interface
+	// Expose CLI interface (RPC over unix domain sockets)
 	go func() {
 		err := os.RemoveAll(sockaddr)
 		failHard(err)
@@ -53,32 +53,45 @@ func startDaemon() {
 		failHard(err)
 
 		rpcServer := rpc.NewServer()
-		cliMethods := cli.NewMethods(cat)
+		cliMethods := cli.NewMethods(cat, fluServer)
 		rpcServer.Register(cliMethods)
 		listener, e := net.ListenUnix("unix", addr)
 		failHard(e)
+		fmt.Printf("UNIX Interface available at: %s\n", sockaddr)
 
 		rpcServer.Accept(listener)
 		listener.Close()
 	}()
 
+	// expose p2p interface (UDP)
 	go func() {
-		go flu.Listen(cat)
-		flu.Send()
+		addr := net.UDPAddr{IP: nil, Port: udpPort, Zone: ""}
+		c1, err := net.ListenUDP("udp", &addr)
+		failHard(err)
+		defer c1.Close()
+		fmt.Printf("UDP Interface available at: %s:%d\n", fluServer.LocalIP().String(), udpPort)
+
+		for {
+			buffer := make([]byte, 1024)
+			_, returnAddress, err := c1.ReadFromUDP(buffer)
+			failHard(err)
+			go fluServer.HandleMessage(buffer, returnAddress.IP)
+		}
 	}()
 
 	// expose TCP interface. Only for benchmarking.
-	go func() {
-		server, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", tcpPort))
-		failHard(err)
-		defer server.Close()
-		fmt.Println("TCP Server started. Waiting for connections...")
-		for {
-			connection, err := server.Accept()
-			failHard(err)
-			go transfertcp.SendFile(connection, cat)
-		}
-	}()
+	// go func() {
+	// 	server, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", tcpPort))
+	// 	failHard(err)
+	// 	defer server.Close()
+	// 	fmt.Printf("TCP Interface available at: %d\n", tcpPort)
+
+	// 	for {
+	// 		connection, err := server.Accept()
+	// 		failHard(err)
+	// 		go transfertcp.SendFile(connection, cat)
+	// 	}
+	// }()
 
 	for {
 		// TODO: Download files that need downloading

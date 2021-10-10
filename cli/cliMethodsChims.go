@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"github.com/flu-network/client/common"
 )
 
 // ChimRequest is a host-discovery message (since chimneys are portals to the floo network in Harry
@@ -34,7 +36,7 @@ func (c *ChimResponse) Sprintf() string {
 
 // ChimResponseList is a list of ChimResponses
 type ChimResponseList struct {
-	Responses []*ChimResponse
+	Responses []ChimResponse
 }
 
 // Sprintf returns a pretty-printed, user-facing string representation of a ChimResponseList
@@ -51,5 +53,15 @@ func (c *ChimResponseList) Sprintf() string {
 // running locally will not respond to this request. For that, use `flu list`.
 func (m *Methods) Chims(req *ChimRequest, resp *ChimResponseList) error {
 	// TODO: Reach out to the daemon to actually send and fulfill the request
+	r := m.fluServer.FindAvailableHosts(&common.Sha1Hash{}, []uint16{})
+	resp.Responses = make([]ChimResponse, len(r))
+	for i, peer := range r {
+		resp.Responses[i] = ChimResponse{
+			HostIP:   peer.Address,
+			HostPort: peer.Port,
+			Items:    []ListItem{},
+		}
+	}
+
 	return nil
 }

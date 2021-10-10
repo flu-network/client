@@ -24,31 +24,17 @@ Indexes, hosts and downloads files over LANs
 - `go build . && ./client -d`
 - `go build . && ./client list`
 
+### Test host discovery
+- use scripts `runRemoteClient` and `runRemoteDaemon` in `../scripts`
+
 ### TODO:
-- implement `flu tcpget host sha1hash`
-    [x] use port binary.BigEndian.Uint16([]byte{"F", "0"}) as UDP port
-    [x] use port binary.BigEndian.Uint16([]byte{"F", "1"}) as TCP port
-    [x] add a TCP listener inside main(), waiting for msg containing sha1 hash
-        [x] on receipt just send the whole file
-        [x] use reference: https://mrwaggel.be/post/golang-transfer-a-file-over-a-tcp-socket/
-        - this is our first benchmark 😨
-
-- Get test script working (~/Documents/code/bradfield/csi/flu/client/scripts/hostDiscovery.sh)
-    [ ] compile
-    [ ] copy binary
-    [ ] clear remote index
-    [ ] rebuild remote index
-    [ ] start remote daemon
-    [ ] start local daemon
-    [ ] run `flu chims` successfully (see below first)
-
-
-- implement host discovery so we can do tcpget over LAN instead of just localhost
-    [ ] complete CLI method chims
-        - CLI -> daemon (via RPC) -> remote hosts (via UDP)
-        - reference https://ops.tips/blog/udp-client-and-server-in-go/ for UDP OS-level goodies
-
-- Second FTP benchmark:
+- add sha1hash filtering for flu chims
+    - Right now all hosts respond with just their own IP
+    - They should also include a list of files they have available
+    - AND if the requester asks for a specific file / data range, they should only respond with
+      info relevant to the requester
+- implement index cleaning (i.e., remove entries for missing files)
+- FTP benchmark:
     [x] setup Anna's laptop with rsync (for code) as a second client
         [ ] use `brew install inetutils`
         [ ] set up ftp servers on both machines
@@ -57,3 +43,6 @@ Indexes, hosts and downloads files over LANs
 
 ### Local Dev notes:
 - use `fn + f5` to run the client with debugging enabled in daemon mode
+
+### Resources
+- https://ops.tips/blog/udp-client-and-server-in-go/ for UDP OS-level goodies

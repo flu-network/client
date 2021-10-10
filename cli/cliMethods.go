@@ -1,6 +1,9 @@
 package cli
 
-import "github.com/flu-network/client/catalogue"
+import (
+	"github.com/flu-network/client/catalogue"
+	"github.com/flu-network/client/flu"
+)
 
 /*
 This is a wrapper acount the 'server-side' methods that can be executed 'remotely' by the CLI. New
@@ -12,11 +15,14 @@ for an example.
 // imported and used directly by github.com/flu-network/cli over unix domain sockets, exposed
 // by main.go
 type Methods struct {
-	// Used to expose catalogue information (e.g., download stats) to the CLI
+	// Used to access catalogue information on disk (e.g., download stats) to the CLI
 	cat *catalogue.Cat
+
+	// Used to access the flu-network's UDP interface
+	fluServer *flu.Server
 }
 
 // NewMethods returns a NewMethods instance. cat is expected to be initialized by the caller.
-func NewMethods(cat *catalogue.Cat) *Methods {
-	return &Methods{cat: cat}
+func NewMethods(cat *catalogue.Cat, fluServer *flu.Server) *Methods {
+	return &Methods{cat: cat, fluServer: fluServer}
 }

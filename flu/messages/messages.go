@@ -1,26 +1,26 @@
-package flu
+package messages
 
 import (
 	"encoding/binary"
-	"fmt"
-	"net"
-	"time"
 
-	"github.com/flu-network/client/catalogue"
 	"github.com/flu-network/client/common"
 )
 
-const discoverHostTimeout = time.Second // Allow hosts one second to respond
+// Message describes the methods that all flu messages have in common.
+type Message interface {
+	Serialize() []byte // Serialize converts its subject into a []byte for transmission
+	Type() uint8       // Type returns a uint8 that identidies the type of message
+}
 
 // DiscoverHostRequest is broadcast to all hosts on the LAN to ask participating hosts which chunks
 // in the given range they have of the specified file hash.
 type DiscoverHostRequest struct {
+	// The requestID is only used by the client to tie a response to an outgoing request
+	RequestID uint16
+
 	// The sha1 hash of the file we're interested in. If the hash is FFF... then hosts are requested
 	// to respond with information about all files they have available
 	Sha1Hash common.Sha1Hash
-
-	// The requestID is only used by the client to tie a response to an outgoing request
-	RequestID uint16
 
 	// The ranges of chunks we're interested in. If no chunks are specified then hosts are requested
 	// to return the ranges of all chunks that they have
@@ -34,11 +34,11 @@ func (r *DiscoverHostRequest) Serialize() []byte {
 	// message type
 	result[0] = discoverHostRequest
 
-	// sha1 hash
-	copy(result[1:21], r.Sha1Hash.Slice())
-
 	// request ID
-	binary.BigEndian.PutUint16(result[21:23], r.RequestID)
+	binary.BigEndian.PutUint16(result[1:3], r.RequestID)
+
+	// sha1 hash
+	copy(result[3:23], r.Sha1Hash.Slice())
 
 	// chunk count
 	result[23] = uint8(len(r.Chunks))
@@ -52,6 +52,16 @@ func (r *DiscoverHostRequest) Serialize() []byte {
 
 	result = append(result, chunks...)
 	return result
+}
+
+// Type returns a uint8 that identifies this message type
+func (r *DiscoverHostRequest) Type() byte {
+	return discoverHostRequest
+}
+
+// ResponseType returns a uint8 that identidies the type of response expected for this message
+func (r *DiscoverHostRequest) ResponseType() byte {
+	return discoverHostResponse
 }
 
 // DiscoverHostResponse is returned in response to a DiscoverHostRequest
@@ -68,59 +78,21 @@ func (r *DiscoverHostResponse) Serialize() []byte {
 	// message type
 	result[0] = discoverHostResponse
 
+	// request ID
+	binary.BigEndian.PutUint16(result[1:3], r.RequestID)
+
 	// address
-	copy(result[1:5], r.Address[:])
+	copy(result[3:7], r.Address[:])
 
 	// port
-	binary.BigEndian.PutUint16(result[5:7], r.Port)
-
-	// request ID
-	binary.BigEndian.PutUint16(result[7:9], r.RequestID)
+	binary.BigEndian.PutUint16(result[7:9], r.Port)
 
 	return result
 }
 
-func Listen(cat *catalogue.Cat) {
-	addr := net.UDPAddr{
-		IP:   []byte{127, 0, 0, 1},
-		Port: UDPPort,
-		Zone: "",
-	}
-	c1, err := net.ListenUDP("udp", &addr)
-	defer c1.Close()
-	check(err)
-
-	buffer := make([]byte, 1024)
-	_, returnAddress, err := c1.ReadFromUDP(buffer)
-	check(err)
-
-	resp, err := HandleMessage(cat, buffer)
-	check(err)
-
-	c2, err := net.DialUDP("udp", nil, returnAddress)
-	defer c2.Close()
-	check(err)
-
-	c2.Write(resp)
-
-	fmt.Printf("%v\n", returnAddress)
-}
-
-func Send() {
-	conn, err := net.DialUDP("udp", nil, &broadcastAddress)
-	check(err)
-	defer conn.Close()
-
-	req := DiscoverHostRequest{
-		Sha1Hash:  *(&common.Sha1Hash{}).FromString("b32d902059d1dff19eedffa39c561ef4f0ddfc29"),
-		RequestID: 123,
-		Chunks:    []uint16{},
-	}
-
-	bytes := req.Serialize()
-
-	conn.Write(bytes)
-
+// Type returns a uint8 that identifies this message type
+func (r *DiscoverHostResponse) Type() byte {
+	return discoverHostResponse
 }
 
 func check(err error) {
