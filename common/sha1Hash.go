@@ -1,35 +1,37 @@
 package common
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 )
 
 // Sha1Hash is a convenient wrapper around the 20 bytes that make up a sha1Hash. Should be passed
 // by pointer to avoid making copies.
 type Sha1Hash struct {
-	data [20]byte
+	Data [20]byte // The underlying data in the hash. Should not be manipulated directly
 }
 
 // Array returns a pointer to the underlying data
 func (h *Sha1Hash) Array() *[20]byte {
-	return &h.data
+	return &h.Data
 }
 
 // String returns a hex-encoded string representation of the hash.
 func (h *Sha1Hash) String() string {
-	return hex.EncodeToString(h.data[:])
+	return hex.EncodeToString(h.Data[:])
 }
 
 // Slice returns a slice of the underlying hash data. The data is not copied.
 func (h *Sha1Hash) Slice() []byte {
-	return h.data[:]
+	return h.Data[:]
 }
 
 // SliceCopy copies and returns a slice of the underlying hash data.
 func (h *Sha1Hash) SliceCopy() []byte {
 	result := make([]byte, 20)
-	copy(result, h.data[:])
+	copy(result, h.Data[:])
 	return result
 }
 
@@ -42,7 +44,7 @@ func (h *Sha1Hash) FromString(str string) *Sha1Hash {
 		panic(err)
 	}
 
-	copy(h.data[:], bytes)
+	copy(h.Data[:], bytes)
 	return h
 }
 
@@ -59,7 +61,7 @@ func (h *Sha1Hash) FromStringSafe(str string) error {
 		return fmt.Errorf("Expected 20-byte string but got %d", len(bytes))
 	}
 
-	copy(h.data[:], bytes)
+	copy(h.Data[:], bytes)
 	return nil
 }
 
@@ -67,7 +69,7 @@ func (h *Sha1Hash) FromStringSafe(str string) error {
 // hash. If there's any ambiguity about whether the input is valid, use FromSliceSafe(). It returns
 // itself for syntactic convenience.
 func (h *Sha1Hash) FromSlice(s []byte) *Sha1Hash {
-	copy(h.data[:], s)
+	copy(h.Data[:], s)
 	return h
 }
 
@@ -78,7 +80,7 @@ func (h *Sha1Hash) FromSliceSafe(s []byte) error {
 		return fmt.Errorf("Expected 20-byte string but got %d", len(s))
 	}
 
-	copy(h.data[:], s)
+	copy(h.Data[:], s)
 	return nil
 }
 
@@ -86,7 +88,16 @@ func (h *Sha1Hash) FromSliceSafe(s []byte) error {
 // itself.
 func (h *Sha1Hash) Blank() *Sha1Hash {
 	for i := 0; i < 20; i++ {
-		h.data[i] = 255
+		h.Data[i] = 255
 	}
 	return h
+}
+
+// IsBlank returns true if the sha1hash is blank (i.e., FF...FF); i.e., a 'null' hash. Benchmarked
+// to be 4x faster than the naive loop=based approach
+func (h *Sha1Hash) IsBlank() bool {
+	c1 := binary.BigEndian.Uint64(h.Data[:8])
+	c2 := binary.BigEndian.Uint64(h.Data[8:16])
+	c3 := binary.BigEndian.Uint32(h.Data[16:20])
+	return c1 == math.MaxUint64 && c1 == c2 && c3 == math.MaxUint32
 }

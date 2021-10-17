@@ -145,7 +145,7 @@ func (b *Bitset) Intersect(a *Bitset) *Bitset {
 
 // Overlap takes a sorted  list of ranges ([]uint16 of even length) where each consecutive pair of
 // numbers represents an inclusive range [start, end] of bits. The return value is a sorted list of
-// ranges that are set to 'on' within the underlying bitset
+// non-overallping ranges that are set to 'on' within the underlying bitset
 func (b *Bitset) Overlap(ranges []uint16) []uint16 {
 	result := make([]uint16, 0, len(ranges))
 	for i := 0; i < len(ranges); i += 2 {
@@ -153,6 +153,12 @@ func (b *Bitset) Overlap(ranges []uint16) []uint16 {
 		result = append(result, b.filledRanges(int(start), int(end))...)
 	}
 	return result
+}
+
+// Ranges returns a sorted, non-overallping list of ranges of the underlying bitset that are set to
+// true.
+func (b *Bitset) Ranges() []uint16 {
+	return b.filledRanges(0, b.size)
 }
 
 func (b *Bitset) filledRanges(start, end int) []uint16 {
