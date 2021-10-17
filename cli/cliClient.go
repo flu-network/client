@@ -80,9 +80,9 @@ func (c *Client) Run(cmdArgs []string) {
 		if len(args) > 0 {
 			err := hash.FromStringSafe(args[0])
 			validate(err)
-			req.Sha1Hash = *hash.Array()
+			req.Sha1Hash = &hash
 		} else {
-			req.Sha1Hash = *hash.Blank().Array()
+			req.Sha1Hash = hash.Blank()
 		}
 		err := client.Call("Methods.Chims", &req, &res)
 		if err != nil {

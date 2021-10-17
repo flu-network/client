@@ -5,10 +5,8 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/flu-network/client/catalogue"
-	"github.com/flu-network/client/common"
 	"github.com/flu-network/client/flu/messages"
 )
 
@@ -101,7 +99,19 @@ func (s *Server) HandleMessage(message []byte, returnIP net.IP) error {
 			Address:   [4]byte{(*ip)[0], (*ip)[1], (*ip)[2], (*ip)[3]},
 			Port:      uint16(s.port),
 			RequestID: msg.RequestID,
+			Chunks:    []uint16{},
 		}
+
+		if !msg.Sha1Hash.IsBlank() {
+			if ir, err := s.cat.Contains(&msg.Sha1Hash); err == nil {
+				if len(msg.Chunks) > 0 { // if they asked for chunks
+					resp.Chunks = ir.ProgressFile.Progress.Overlap(msg.Chunks) // return overlap
+				} else {
+					resp.Chunks = ir.ProgressFile.Progress.Ranges() // return all ranges
+				}
+			}
+		}
+
 		reply = resp.Serialize()
 
 	// deliver responses
@@ -145,52 +155,6 @@ func (s *Server) LocalIP() *net.IP {
 	}
 
 	return nil
-}
-
-// FindAvailableHosts broadcasts a DiscoverHostRequest on the local network, collects responses for
-// one second, and returns the collected results.
-// TODO: filter results down to just the specified hash.
-func (s *Server) FindAvailableHosts(
-	hash *common.Sha1Hash,
-	chunks []uint16,
-) []messages.DiscoverHostResponse {
-	// construct a request
-	req := messages.DiscoverHostRequest{
-		Sha1Hash:  *hash,
-		RequestID: s.generateRequestID(),
-		Chunks:    chunks,
-	}
-
-	// add a response harness for it
-	responseChan := s.registerResponseChan(req.RequestID, req.ResponseType())
-
-	// send it into the ether
-	var broadcastAddress = net.UDPAddr{
-		IP:   []byte{255, 255, 255, 255}, // broadcast IP
-		Port: s.port,                     // all hosts should use the same port
-	}
-
-	conn, err := net.DialUDP("udp", nil, &broadcastAddress)
-	check(err)
-	defer conn.Close()
-	conn.Write(req.Serialize())
-
-	// set a timeout and wait for the response
-	waitChan := time.After(1 * time.Second)
-	result := make([]messages.DiscoverHostResponse, 0)
-
-	for {
-		select {
-		case <-waitChan:
-			// if timed out, clean up
-			s.unregisterResponseChan(req.RequestID, req.ResponseType())
-			return result
-		case res := <-responseChan:
-			// else cast response into desired type
-			parsedResponse := res.(*messages.DiscoverHostResponse)
-			result = append(result, *parsedResponse)
-		}
-	}
 }
 
 func check(e error) {

@@ -28,11 +28,8 @@ Indexes, hosts and downloads files over LANs
 - use scripts `runRemoteClient` and `runRemoteDaemon` in `../scripts`
 
 ### TODO:
-- add sha1hash filtering for flu chims
-    - Right now all hosts respond with just their own IP
-    - They should also include a list of files they have available
-    - AND if the requester asks for a specific file / data range, they should only respond with
-      info relevant to the requester
+- implement file discovery within a single host
+    - i.e., "hi you, what files do you have for me?"
 - implement index cleaning (i.e., remove entries for missing files)
 - FTP benchmark:
     [x] setup Anna's laptop with rsync (for code) as a second client
