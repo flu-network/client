@@ -71,10 +71,10 @@ func (b *Bitset) Set(x uint64) {
 	b.size = max(b.size, int(x)+1)
 }
 
-// Fill sets all items between 0:size to true.
-func (b *Bitset) Fill() {
+// Fill sets all items between 0:size to true. Returns itself for syntactic convenience
+func (b *Bitset) Fill() *Bitset {
 	if b.size == 0 {
-		return
+		return b
 	}
 
 	maxOffset := (b.size - 1) / wordSize
@@ -84,6 +84,7 @@ func (b *Bitset) Fill() {
 
 	lastIndex := (b.size - 1) % wordSize
 	b.data[maxOffset] = (((1 << lastIndex) - 1) << 1) | 1
+	return b
 }
 
 // Full returns true if all items between 0:size are set to true, and false if not.
@@ -104,13 +105,14 @@ func (b *Bitset) Full() bool {
 }
 
 // Unset sets the specified index to False. If the specified index is out of bounds, nothing
-// happens. Does not cause size to shrink.
-func (b *Bitset) Unset(x uint64) {
+// happens. Does not cause size to shrink. Returns itself
+func (b *Bitset) Unset(x uint64) *Bitset {
 	offset := int(x) / wordSize
 	if offset >= len(b.data) {
-		return
+		return b
 	}
 	b.data[offset] = b.data[offset] - (1 << (x % wordSize))
+	return b
 }
 
 // Union returns the union between any two bitsets
@@ -139,6 +141,37 @@ func (b *Bitset) Intersect(a *Bitset) *Bitset {
 	}
 
 	return &Bitset{data: result}
+}
+
+// Overlap takes a sorted  list of ranges ([]uint16 of even length) where each consecutive pair of
+// numbers represents an inclusive range [start, end] of bits. The return value is a sorted list of
+// ranges that are set to 'on' within the underlying bitset
+func (b *Bitset) Overlap(ranges []uint16) []uint16 {
+	result := make([]uint16, 0, len(ranges))
+	for i := 0; i < len(ranges); i += 2 {
+		start, end := ranges[i], ranges[i+1]
+		result = append(result, b.filledRanges(int(start), int(end))...)
+	}
+	return result
+}
+
+func (b *Bitset) filledRanges(start, end int) []uint16 {
+	result := make([]uint16, 0, 2)
+	rStart, rEnd := start, start-1
+	for i := start; i <= end; i++ {
+		if b.Get(uint64(i)) {
+			rEnd = i
+		} else {
+			if rEnd >= rStart {
+				result = append(result, uint16(rStart), uint16(rEnd))
+			}
+			rStart = i + 1
+		}
+	}
+	if rEnd >= rStart {
+		result = append(result, uint16(rStart), uint16(rEnd))
+	}
+	return result
 }
 
 // Serialize converts the bitset into a []byte so it can be transmitted somewhere. It makes a copy

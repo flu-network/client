@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
-	"strconv"
 	"testing"
 )
 
@@ -144,7 +143,6 @@ func TestBitsetFillAndFull(t *testing.T) {
 		for i := 0; i < limit; i++ {
 			if i%64 == 0 {
 				prev++
-				fmt.Printf("%d: %s\n", prev, strconv.FormatInt(int64(b1.data[prev]), 2))
 			}
 			if b1.Get(uint64(i)) != true {
 				t.Fatalf("Expected filled bitset to actually be filled but %d was unset", i)
@@ -164,10 +162,8 @@ func TestBitsetFillAndFull(t *testing.T) {
 		for i := 0; i < limit; i++ {
 			if i%64 == 0 {
 				prev++
-				fmt.Printf("%d: %s\n", prev, strconv.FormatInt(int64(b1.data[prev]), 2))
 			}
 			if b1.Get(uint64(i)) != true {
-				fmt.Printf("%d: %s\n", prev+1, strconv.FormatInt(int64(b1.data[prev+1]), 2))
 				t.Fatalf("Expected filled bitset to actually be filled but %d was unset", i)
 			}
 		}
@@ -249,5 +245,56 @@ func TestSerialization(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestOverlap(t *testing.T) {
+	type expectation struct {
+		desc   string
+		bitset Bitset
+		input  []uint16
+		output []uint16
+	}
+
+	testCases := []expectation{
+		{
+			desc:   "no overlap",
+			bitset: *NewBitset(10).Fill(),
+			input:  []uint16{11, 15},
+			output: []uint16{},
+		},
+		{
+			desc:   "full overlap",
+			bitset: *NewBitset(10).Fill(),
+			input:  []uint16{0, 9},
+			output: []uint16{0, 9},
+		},
+		{
+			desc:   "overlap with start of query",
+			bitset: *NewBitset(10).Fill(),
+			input:  []uint16{5, 15},
+			output: []uint16{5, 9},
+		},
+		{
+			desc:   "overlap with end of query",
+			bitset: *NewBitset(10).Fill().Unset(0).Unset(1),
+			input:  []uint16{0, 5},
+			output: []uint16{2, 5},
+		},
+		{
+			desc:   "disjoint overlap",
+			bitset: *NewBitset(10).Fill().Unset(1).Unset(5).Unset(8),
+			input:  []uint16{0, 9},
+			output: []uint16{0, 0, 2, 4, 6, 7, 9, 9},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			result := testCase.bitset.Overlap(testCase.input)
+			if !reflect.DeepEqual(result, testCase.output) {
+				t.Fatalf("Expected %v to equal %v\n", result, testCase.output)
+			}
+		})
 	}
 }
