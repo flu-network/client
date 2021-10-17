@@ -6,12 +6,6 @@ import (
 	"github.com/flu-network/client/common"
 )
 
-// Message describes the methods that all flu messages have in common.
-type Message interface {
-	Serialize() []byte // Serialize converts its subject into a []byte for transmission
-	Type() uint8       // Type returns a uint8 that identidies the type of message
-}
-
 // DiscoverHostRequest is broadcast to all hosts on the LAN to ask participating hosts which chunks
 // in the given range they have of the specified file hash.
 type DiscoverHostRequest struct {
@@ -105,10 +99,4 @@ func (r *DiscoverHostResponse) Serialize() []byte {
 // Type returns a uint8 that identifies this message type
 func (r *DiscoverHostResponse) Type() byte {
 	return discoverHostResponse
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

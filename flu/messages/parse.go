@@ -30,6 +30,31 @@ func Parse(data []byte) (msg Message, err error) {
 			Chunks:    chunks,
 		}, nil
 
+	case listFilesRequest:
+		reqID := reader.readUint16()
+		return &ListFilesRequest{
+			RequestID: reqID,
+		}, nil
+
+	case listFilesResponse:
+		reqID := reader.readUint16()
+		entryCount := reader.readUint16()
+		entries := make([]ListFilesEntry, entryCount)
+		for i := 0; i < int(entryCount); i++ {
+			entries[i] = ListFilesEntry{
+				SizeInBytes:      reader.readUint64(),
+				ChunkCount:       reader.readUint32(),
+				ChunkSizeInBytes: reader.readUint32(),
+				ChunksDownloaded: reader.readUint32(),
+				Sha1Hash:         reader.readSha1Hash(),
+				FileName:         reader.readString256(),
+			}
+		}
+		return &ListFilesResponse{
+			RequestID: reqID,
+			Files:     entries,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("Message of unknown type discarded: %d", msgType)
 	}

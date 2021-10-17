@@ -38,11 +38,40 @@ func (b *byteReader) readUint16() uint16 {
 	return result
 }
 
+func (b *byteReader) readUint32() uint32 {
+	result := binary.BigEndian.Uint32(b.Data[b.index : b.index+4])
+	b.index += 4
+	return result
+}
+
+func (b *byteReader) readUint64() uint64 {
+	result := binary.BigEndian.Uint64(b.Data[b.index : b.index+8])
+	b.index += 8
+	return result
+}
+
 func (b *byteReader) readSliceUint16() []uint16 {
 	length := int(b.readByte())
 	result := make([]uint16, length)
 	for i := 0; i < length; i++ {
 		result[i] = b.readUint16()
 	}
+	return result
+}
+
+func (b *byteReader) readString256() string {
+	length := int(b.readByte())
+	result := string(b.Data[b.index : b.index+length])
+	b.index += length
+	return result
+}
+
+// Serialization utilities
+
+// SerializeString256 serializaes the first 256 bytes of a string. Later bytes are ignored.
+func SerializeString256(s string) []byte {
+	result := make([]byte, 1+len(s))
+	resultLen := copy(result[1:], s)
+	result[0] = uint8(resultLen)
 	return result
 }
