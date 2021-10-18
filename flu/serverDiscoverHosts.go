@@ -8,9 +8,9 @@ import (
 	"github.com/flu-network/client/flu/messages"
 )
 
-// FindAvailableHosts broadcasts a DiscoverHostRequest on the local network, collects responses for
-// one second, and returns the collected results.
-func (s *Server) FindAvailableHosts(
+// DiscoverHosts broadcasts a DiscoverHostRequest on the local network, collects responses for
+// a few seconds, and returns the collected results.
+func (s *Server) DiscoverHosts(
 	hash *common.Sha1Hash,
 	chunks []uint16,
 ) []messages.DiscoverHostResponse {
@@ -51,4 +51,26 @@ func (s *Server) FindAvailableHosts(
 			result = append(result, *parsedResponse)
 		}
 	}
+}
+
+func (s *Server) RespondToDiscoverHosts(req *messages.DiscoverHostRequest) []byte {
+	ip := s.LocalIP()
+	resp := messages.DiscoverHostResponse{
+		Address:   [4]byte{(*ip)[0], (*ip)[1], (*ip)[2], (*ip)[3]},
+		Port:      uint16(s.port),
+		RequestID: req.RequestID,
+		Chunks:    []uint16{},
+	}
+
+	if !req.Sha1Hash.IsBlank() {
+		if ir, err := s.cat.Contains(&req.Sha1Hash); err == nil {
+			if len(req.Chunks) > 0 { // if they asked for chunks
+				resp.Chunks = ir.ProgressFile.Progress.Overlap(req.Chunks) // return overlap
+			} else {
+				resp.Chunks = ir.ProgressFile.Progress.Ranges() // return all ranges
+			}
+		}
+	}
+
+	return resp.Serialize()
 }

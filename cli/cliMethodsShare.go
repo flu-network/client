@@ -34,7 +34,7 @@ func (li *ListItem) Sprintf() string {
 		fmt.Sprintf("	Sha1 Hash: %s\n", hex.EncodeToString(li.Sha1Hash[:])),
 		fmt.Sprintf("	Chunk Count: %d\n", li.ChunkCount),
 		fmt.Sprintf("	Chunks Downloaded: %d\n", li.ChunksDownloaded),
-		fmt.Sprintf("	Chunk Size: %d\n", li.SizeInBytes),
+		fmt.Sprintf("	Chunk Size: %d\n", li.ChunkSizeInBytes),
 		fmt.Sprintf("	Integrity: %d%%\n", (li.ChunksDownloaded*100/li.ChunkCount*100)/100),
 	}
 

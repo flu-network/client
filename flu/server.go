@@ -81,6 +81,11 @@ func (s *Server) deliverResponse(reqID uint16, msg messages.Message) error {
 	return fmt.Errorf("ResponseChan {%d:%d} expired", reqID, msg)
 }
 
+// Port retuns the port the server is running on
+func (s *Server) Port() int {
+	return s.port
+}
+
 // HandleMessage does exactly what it says. It expects parameters to be passed by value because
 // it is assumed it will be run concurrently.
 func (s *Server) HandleMessage(message []byte, returnIP net.IP) error {
@@ -92,30 +97,13 @@ func (s *Server) HandleMessage(message []byte, returnIP net.IP) error {
 	var reply []byte = nil
 
 	switch msg := parsedMessage.(type) {
-	// handle requests
 	case *messages.DiscoverHostRequest:
-		ip := s.LocalIP()
-		resp := messages.DiscoverHostResponse{
-			Address:   [4]byte{(*ip)[0], (*ip)[1], (*ip)[2], (*ip)[3]},
-			Port:      uint16(s.port),
-			RequestID: msg.RequestID,
-			Chunks:    []uint16{},
-		}
-
-		if !msg.Sha1Hash.IsBlank() {
-			if ir, err := s.cat.Contains(&msg.Sha1Hash); err == nil {
-				if len(msg.Chunks) > 0 { // if they asked for chunks
-					resp.Chunks = ir.ProgressFile.Progress.Overlap(msg.Chunks) // return overlap
-				} else {
-					resp.Chunks = ir.ProgressFile.Progress.Ranges() // return all ranges
-				}
-			}
-		}
-
-		reply = resp.Serialize()
-
-	// deliver responses
+		reply = s.RespondToDiscoverHosts(msg)
+	case *messages.ListFilesRequest:
+		reply = s.RespondToListFilesOnHost(msg)
 	case *messages.DiscoverHostResponse:
+		return s.deliverResponse(msg.RequestID, parsedMessage)
+	case *messages.ListFilesResponse:
 		return s.deliverResponse(msg.RequestID, parsedMessage)
 
 	// freak out if we don't know how to handle a parsed response

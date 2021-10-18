@@ -28,8 +28,7 @@ Indexes, hosts and downloads files over LANs
 - use scripts `runRemoteClient` and `runRemoteDaemon` in `../scripts`
 
 ### TODO:
-- implement file discovery within a single host
-    - i.e., "hi you, what files do you have for me?"
+- implement transfer! This is it!
 - implement index cleaning (i.e., remove entries for missing files)
 - FTP benchmark:
     [x] setup Anna's laptop with rsync (for code) as a second client

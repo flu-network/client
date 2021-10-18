@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net"
 	"net/rpc"
 	"os"
 	"reflect"
@@ -64,9 +65,16 @@ func (c *Client) Run(cmdArgs []string) {
 			fmt.Print(res.Sprintf())
 		}
 	case "list":
-		validateArgCount("List", ListRequest{}, args)
 		req := ListRequest{}
 		res := ListResponse{Items: []ListItem{}}
+		if len(args) > 0 {
+			addr := net.ParseIP(args[0])
+			if addr == nil {
+				prettyPrintError(fmt.Errorf("Invalid IP Address: %s", args[0]))
+				return
+			}
+			req.IP = &addr
+		}
 		err := client.Call("Methods.List", &req, &res)
 		if err != nil {
 			prettyPrintError(err)

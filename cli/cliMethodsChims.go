@@ -51,7 +51,7 @@ func (c *ChimResponseList) Sprintf() string {
 // Chims lists available hosts on the network. If a sha1 is provided, only hosts that have at least
 // some of that file will respond, and their responses will be scoped to that one file.
 func (m *Methods) Chims(req *ChimRequest, resp *ChimResponseList) error {
-	r := m.fluServer.FindAvailableHosts(req.Sha1Hash, []uint16{})
+	r := m.fluServer.DiscoverHosts(req.Sha1Hash, []uint16{})
 	resp.Responses = make([]ChimResponse, len(r))
 	for i, peer := range r {
 		resp.Responses[i] = ChimResponse{
