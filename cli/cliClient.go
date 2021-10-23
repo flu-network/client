@@ -6,10 +6,8 @@ import (
 	"net/rpc"
 	"os"
 	"reflect"
-	"strconv"
 
 	"github.com/flu-network/client/common"
-	transfertcp "github.com/flu-network/client/transferTCP"
 )
 
 // Client is the entrypoint for code that runs on the CLI process. The user types commands
@@ -105,15 +103,6 @@ func (c *Client) Run(cmdArgs []string) {
 		} else {
 			fmt.Print(res.Sprintf())
 		}
-	// gettcp is used as a quick-and-dirty way to transfer a file over TCP to establish a benchmark.
-	// It is distinct from other CLI methods in that the CLI process lives until the transfer is
-	// complete.
-	case "gettcp":
-		validateArgCount("GetTCP", GetRequest{}, args)
-		hash := common.Sha1Hash{}
-		err := hash.FromStringSafe(args[0])
-		validate(err)
-		transfertcp.GetFile(&hash)
 
 	default:
 		fmt.Printf("Unknown command: %s\n", cmd)

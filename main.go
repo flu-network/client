@@ -79,20 +79,6 @@ func startDaemon() {
 		}
 	}()
 
-	// expose TCP interface. Only for benchmarking.
-	// go func() {
-	// 	server, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", tcpPort))
-	// 	failHard(err)
-	// 	defer server.Close()
-	// 	fmt.Printf("TCP Interface available at: %d\n", tcpPort)
-
-	// 	for {
-	// 		connection, err := server.Accept()
-	// 		failHard(err)
-	// 		go transfertcp.SendFile(connection, cat)
-	// 	}
-	// }()
-
 	for {
 		// TODO: Download files that need downloading
 		time.Sleep(time.Millisecond * 1000)
