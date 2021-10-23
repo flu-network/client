@@ -29,7 +29,7 @@ func NewClient(addr string) *Client {
 // Run is the entry point for the CLI
 func (c *Client) Run(cmdArgs []string) {
 	if len(cmdArgs) == 0 {
-		fmt.Println("No command supplied") // TODO: print something useful
+		fmt.Println("No command supplied")
 		return
 	}
 
@@ -40,20 +40,13 @@ func (c *Client) Run(cmdArgs []string) {
 	args := cmdArgs[1:]
 
 	switch cmd {
-	case "add":
-		validateArgCount("Add", AddRequest{}, args)
-		a, err := strconv.Atoi(args[0])
-		validate(err)
-		b, err := strconv.Atoi(args[1])
-		validate(err)
-		addReq := AddRequest{A: a, B: b}
-		addResp := AddResponse{}
-		err = client.Call("Methods.Add", &addReq, &addResp)
-		if err != nil {
-			prettyPrintError(err)
-		} else {
-			fmt.Printf("Added numbers: %v + %v = %v.\n", addReq.A, addReq.B, addResp.Response)
-		}
+	/*
+		Share makes a file available on the flu network. Share assumes that the file you give it has
+		already been downloaded in its entirety and will never change. If the content of the file
+		changes later, flu will raise an error when an integrity check is next performed.
+		Usage:
+			- flu list ~/Desktop/path-to-file.mkv
+	*/
 	case "share":
 		validateArgCount("Share", ShareRequest{}, args)
 		req := ShareRequest{Filepath: args[0]}
@@ -64,6 +57,14 @@ func (c *Client) Run(cmdArgs []string) {
 		} else {
 			fmt.Print(res.Sprintf())
 		}
+	/*
+		List lists the files availble for download. If an IP address is supplied, it lists the files
+		available on the node at that IP address. If not, it lists the files available on the local
+		daemon. Right now, it only supports IPV4 addresses.
+		Usage:
+			- flu list 					# list files indexed on local daemon
+			- flu list 192.168.86.39 	# list files on 192.168.86,39
+	*/
 	case "list":
 		req := ListRequest{}
 		res := ListResponse{Items: []ListItem{}}
@@ -81,6 +82,12 @@ func (c *Client) Run(cmdArgs []string) {
 		} else {
 			fmt.Print(res.Sprintf())
 		}
+	/*
+		Chims lists available hosts on the LAN, including the local daemon. If gives hosts a few
+		seconds to responds and then prints the response from all hosts that replied.
+		Usage:
+			- flu chims # list available hosts
+	*/
 	case "chims":
 		req := ChimRequest{}
 		res := ChimResponseList{}
