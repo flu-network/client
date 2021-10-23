@@ -99,6 +99,13 @@ func (ind *IndexFile) AddIndexRecord(record *IndexRecord) error {
 	return ind.save()
 }
 
+// RemoveIndexRecord removes an indexRecord from the underlying file, and reloads the in-memory
+// representation of the data so that change is reflected.
+func (ind *IndexFile) RemoveIndexRecord(record *IndexRecord) error {
+	delete(ind.index, record.Sha1Hash)
+	return ind.save()
+}
+
 // MarshalJSON conforms to the Marshaler interface
 func (ind *IndexFile) MarshalJSON() ([]byte, error) {
 	intermediary := indexFileJSON{

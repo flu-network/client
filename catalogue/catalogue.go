@@ -72,14 +72,33 @@ func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
 	return record, nil
 }
 
-// ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
-// in their entirety. The result is a deep copy of the underlying catalogue data, so mutating it is
-// okay.
-func (c *Cat) ListFiles() ([]IndexRecord, error) {
+// UnshareFile immediately deletes all references to it from flu's index. Any transfers in progress
+// will throw errors and stop. The actual file is not affected in any way.
+func (c *Cat) UnshareFile(ir *IndexRecord) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	result := make([]IndexRecord, 0, len(c.indexFile.index))
+	err := ir.ProgressFile.delete()
+	if err != nil {
+		return err
+	}
+
+	err = c.indexFile.RemoveIndexRecord(ir)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
+// in their entirety. The result is a deep copy of the underlying catalogue data, so mutating it is
+// okay.
+func (c *Cat) ListFiles() ([]*IndexRecord, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	result := make([]*IndexRecord, 0, len(c.indexFile.index))
 
 	for _, rec := range c.indexFile.index {
 		if rec.ProgressFile == nil {
@@ -89,10 +108,20 @@ func (c *Cat) ListFiles() ([]IndexRecord, error) {
 			}
 			rec.ProgressFile = p
 		}
-		result = append(result, rec)
+		result = append(result, &rec)
 	}
 
 	return result, nil
+}
+
+// Rehash attempts to recalculate the hash for a given indexRecord. If it fails, a blank hash and an
+// error are returned.
+func (c *Cat) Rehash(ir *IndexRecord) (*common.Sha1Hash, error) {
+	currentHash, err := hashFile(ir.FilePath)
+	if err != nil {
+		return (&common.Sha1Hash{}).Blank(), err
+	}
+	return currentHash, nil
 }
 
 // Contains returns the indexRecord of the file specified by the hash, or an error if the file

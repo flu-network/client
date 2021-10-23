@@ -41,7 +41,7 @@ func startDaemon() {
 	/*
 		TODO: set up harnessing: e.g.,
 			- handle OS signals properly
-			- set up channels for control signals between goroutines
+			- set up channels for control signals between goroutines (e.g., to stop a transfer)
 	*/
 
 	// Expose CLI interface (RPC over unix domain sockets)

@@ -43,6 +43,10 @@ func (p *ProgressFile) save() error {
 	return nil
 }
 
+func (p *ProgressFile) delete() error {
+	return os.Remove(filepath.Join(p.FilePath))
+}
+
 // DeserializeProgressFile reads bytes on disk into an in-memory progressFile.
 func DeserializeProgressFile(record *IndexRecord, dataDir string) (*ProgressFile, error) {
 	progressFilePath := filepath.Join(dataDir, record.Sha1Hash.String())

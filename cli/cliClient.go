@@ -56,6 +56,23 @@ func (c *Client) Run(cmdArgs []string) {
 			fmt.Print(res.Sprintf())
 		}
 	/*
+		Clean checks the integrity of the local flu index. Specifically it:
+		- Removes missing files from the index
+		- Removes files that have sha1 hashes that do not match the indexed sha1 hash
+		Usage:
+			- flu clean
+	*/
+	case "clean":
+		validateArgCount("Clean", CleanRequest{}, args)
+		req := CleanRequest{}
+		res := CleanResponse{}
+		err := client.Call("Methods.Clean", &req, &res)
+		if err != nil {
+			prettyPrintError(err)
+		} else {
+			fmt.Print(res.Sprintf())
+		}
+	/*
 		List lists the files availble for download. If an IP address is supplied, it lists the files
 		available on the node at that IP address. If not, it lists the files available on the local
 		daemon. Right now, it only supports IPV4 addresses.
