@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/flu-network/client/catalogue/bitset"
+	"github.com/flu-network/client/common/bitset"
 )
 
 // ProgressFile is an in-memory representation of a file on disk containing a bitset, which shows
