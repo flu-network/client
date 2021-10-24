@@ -67,7 +67,11 @@ func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
 	}
 
 	record.ProgressFile = NewProgressFile(record, c.DataDir)
-	record.ProgressFile.save()
+	record.ProgressFile.Progress.Fill()
+	err = record.ProgressFile.save()
+	if err != nil {
+		return nil, err
+	}
 
 	return record, nil
 }
@@ -91,16 +95,48 @@ func (c *Cat) UnshareFile(ir *IndexRecord) error {
 	return nil
 }
 
+// RegisterDownload creates a record of the download in flu's index. This is identical to
+// c.ShareFile except that the progress file will register an empty bitset.
+func (c *Cat) RegisterDownload(
+	sizeInBytes uint64,
+	chunkCount uint32,
+	chunkSizeInBytes uint32,
+	sha1Hash *common.Sha1Hash,
+	filename string,
+) error {
+	indexRecord := IndexRecord{
+		FilePath:     fmt.Sprintf("~/Downloads/%s", filename),
+		SizeInBytes:  int64(sizeInBytes),
+		Sha1Hash:     *sha1Hash,
+		ProgressFile: nil,
+		ChunkSize:    int(chunkSizeInBytes),
+	}
+
+	err := c.indexFile.AddIndexRecord(&indexRecord)
+	if err != nil {
+		return err
+	}
+
+	indexRecord.ProgressFile = NewProgressFile(&indexRecord, c.DataDir)
+	indexRecord.ProgressFile.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
 // in their entirety. The result is a deep copy of the underlying catalogue data, so mutating it is
 // okay.
-func (c *Cat) ListFiles() ([]*IndexRecord, error) {
+func (c *Cat) ListFiles() ([]IndexRecord, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	result := make([]*IndexRecord, 0, len(c.indexFile.index))
+	result := make([]IndexRecord, 0, len(c.indexFile.index))
 
 	for _, rec := range c.indexFile.index {
+		fmt.Println(rec.FilePath)
 		if rec.ProgressFile == nil {
 			p, err := DeserializeProgressFile(&rec, c.DataDir)
 			if err != nil {
@@ -108,7 +144,7 @@ func (c *Cat) ListFiles() ([]*IndexRecord, error) {
 			}
 			rec.ProgressFile = p
 		}
-		result = append(result, &rec)
+		result = append(result, rec)
 	}
 
 	return result, nil
@@ -126,12 +162,12 @@ func (c *Cat) Rehash(ir *IndexRecord) (*common.Sha1Hash, error) {
 
 // Contains returns the indexRecord of the file specified by the hash, or an error if the file
 // cannot be accessed for any reason.
-func (c *Cat) Contains(hash *common.Sha1Hash) (IndexRecord, error) {
+func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecord, error) {
 	if record, found := c.indexFile.index[*hash]; found {
 		result, err := c.fill(&record)
-		return *result, err
+		return result, err
 	}
-	return IndexRecord{}, fmt.Errorf("File not found")
+	return nil, fmt.Errorf("File not found")
 }
 
 func (c *Cat) fill(rec *IndexRecord) (*IndexRecord, error) {

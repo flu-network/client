@@ -25,7 +25,6 @@ func NewProgressFile(record *IndexRecord, dataDir string) *ProgressFile {
 		chunkCount++
 	}
 	set := *bitset.NewBitset(int(chunkCount))
-	set.Fill()
 	return &ProgressFile{
 		Progress: set,
 		FilePath: filepath.Join(dataDir, record.Sha1Hash.String()),
