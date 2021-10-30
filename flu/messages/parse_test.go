@@ -43,8 +43,11 @@ func TestDiscoverHostResponse(t *testing.T) {
 }
 
 func TestListFilesRequest(t *testing.T) {
+	h := common.Sha1Hash{}
+	h.FromString("F10E2821BBBEA527EA02200352313BC059445190")
 	msg := &ListFilesRequest{
 		RequestID: 123,
+		Sha1Hash:  &h,
 	}
 
 	serialized := msg.Serialize()

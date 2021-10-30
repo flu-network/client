@@ -9,7 +9,8 @@ import (
 )
 
 // DiscoverHosts broadcasts a DiscoverHostRequest on the local network, collects responses for
-// a few seconds, and returns the collected results.
+// a few seconds, and returns the collected results. Both arguments are optional and serve as
+// filters.
 func (s *Server) DiscoverHosts(
 	hash *common.Sha1Hash,
 	chunks []uint16,

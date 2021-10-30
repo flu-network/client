@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/flu-network/client/catalogue"
+	"github.com/flu-network/client/common"
 	"github.com/flu-network/client/flu/messages"
 )
 
@@ -27,6 +28,9 @@ type Server struct {
 
 	resMap     map[requestKey]chan messages.Message
 	resMapLock sync.Mutex
+
+	downloads map[common.Sha1Hash]*download
+	// uploads   map[common.Sha1Hash]*upload // TODO: make uploads a mirror of downloads
 }
 
 type requestKey struct {
@@ -43,6 +47,7 @@ func NewServer(port int, cat *catalogue.Cat) *Server {
 		reqIDLock:  sync.Mutex{},
 		resMap:     make(map[requestKey](chan messages.Message)),
 		resMapLock: sync.Mutex{},
+		downloads:  make(map[common.Sha1Hash]*download),
 	}
 }
 

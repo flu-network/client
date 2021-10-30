@@ -32,8 +32,10 @@ func Parse(data []byte) (msg Message, err error) {
 
 	case listFilesRequest:
 		reqID := reader.readUint16()
+		hash := reader.readSha1Hash()
 		return &ListFilesRequest{
 			RequestID: reqID,
+			Sha1Hash:  hash,
 		}, nil
 
 	case listFilesResponse:

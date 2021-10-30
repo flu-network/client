@@ -6,15 +6,22 @@ import (
 	"path"
 	"time"
 
+	"github.com/flu-network/client/catalogue"
+	"github.com/flu-network/client/common"
 	"github.com/flu-network/client/flu/messages"
 )
 
 // ListFilesOnHost sends a request for a list of files from a remote host and returns the response.
 // The request times out if not fulfilled in a few seconds
-func (s *Server) ListFilesOnHost(ipv4 *[4]byte, port uint16) *messages.ListFilesResponse {
+func (s *Server) ListFilesOnHost(
+	ipv4 *[4]byte,
+	port uint16,
+	hash *common.Sha1Hash,
+) *messages.ListFilesResponse {
 	// construct a request
 	req := messages.ListFilesRequest{
 		RequestID: s.generateRequestID(),
+		Sha1Hash:  hash,
 	}
 
 	// add a response harness for it
@@ -46,9 +53,20 @@ func (s *Server) ListFilesOnHost(ipv4 *[4]byte, port uint16) *messages.ListFiles
 }
 
 func (s *Server) RespondToListFilesOnHost(req *messages.ListFilesRequest) []byte {
-	files, err := s.cat.ListFiles()
-	if err != nil {
-		log.Fatal(err)
+	var files []catalogue.IndexRecord
+	var err error
+
+	if req.Sha1Hash.IsBlank() {
+		files, err = s.cat.ListFiles()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		file, err := s.cat.Contains(req.Sha1Hash)
+		if err != nil {
+			log.Fatal(err)
+		}
+		files = append(files, *file)
 	}
 
 	resp := messages.ListFilesResponse{

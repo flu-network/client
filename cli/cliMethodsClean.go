@@ -62,9 +62,9 @@ func (m *Methods) Clean(req *CleanRequest, resp *CleanResponse) error {
 	}
 
 	for _, f := range files {
-		currentHash, err := m.cat.Rehash(f)
-		if err != nil {
-			m.cat.UnshareFile(f)
+		currentHash, err := m.cat.Rehash(&f)
+		if err != nil && f.ProgressFile.Progress.Full() {
+			m.cat.UnshareFile(&f)
 		}
 		resp.Items = append(resp.Items, CleanResponseItem{
 			FilePath:        f.FilePath,

@@ -67,7 +67,10 @@ func (c *Client) Run(cmdArgs []string) {
 	// 	- flu list 					# list files indexed on local daemon
 	// 	- flu list 192.168.86.39 	# list files on 192.168.86,39
 	case "list":
-		req := ListRequest{}
+		req := ListRequest{
+			IP:       []byte{},
+			Sha1Hash: (&common.Sha1Hash{}).Blank(),
+		}
 		res := ListResponse{Items: []ListItem{}}
 		if len(args) > 0 {
 			addr := net.ParseIP(args[0])
@@ -75,9 +78,30 @@ func (c *Client) Run(cmdArgs []string) {
 				prettyPrintError(fmt.Errorf("Invalid IP Address: %s", args[0]))
 				return
 			}
-			req.IP = &addr
+			req.IP = addr
+		}
+		if len(args) > 1 {
+			err := req.Sha1Hash.FromStringSafe(args[1])
+			validate(err)
 		}
 		callClientMethodAndPrintResponse(client, "Methods.List", &req, &res)
+
+	// Get starts downloading the specified file from all available hosts. If a transfer has already
+	// been started Get does not affect it. Get runs in the background so will run whenever the flu
+	// daemon is running until the file is downloaded. Get implicitly also shares the file that is
+	// being downloaded.
+	// Usage:
+	//   - flu get A0F1490A20D0211C997B44BC357E1972DEAB8AE3 # get file with this sha1 hash
+	//   - flu get A0F1490A20D0211C997B44BC357E1972DEAB8AE3 --sercet # get this file and don't share
+	case "get":
+		req := GetRequest{
+			Sha1Hash: &common.Sha1Hash{},
+		}
+		res := GetResponse{}
+		err := req.Sha1Hash.FromStringSafe(args[0])
+		validate(err)
+		validateArgCount("Clean", GetRequest{}, args)
+		callClientMethodAndPrintResponse(client, "Methods.Get", &req, &res)
 
 	// Chims lists available hosts on the LAN, including the local daemon. If gives hosts a few
 	// seconds to responds and then prints the response from all hosts that replied.

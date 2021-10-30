@@ -170,6 +170,15 @@ func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecord, error) {
 	return nil, fmt.Errorf("File not found")
 }
 
+// Get is the same as contains, except that if the record does not exist it will panic.
+func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecord {
+	result, err := c.Contains(hash)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
 func (c *Cat) fill(rec *IndexRecord) (*IndexRecord, error) {
 	if rec.ProgressFile == nil {
 		p, err := DeserializeProgressFile(rec, c.DataDir)

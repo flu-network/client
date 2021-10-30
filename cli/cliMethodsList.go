@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/flu-network/client/common"
 )
 
 // ListRequest contains the information necessary for the daemon to find, hash, index and List the
 // file pointed to by FilePath.
 type ListRequest struct {
-	IP *net.IP
+	IP       net.IP
+	Sha1Hash *common.Sha1Hash
 }
 
 // ListResponse is a slice of ListItems, each of which details a file that is shared by the daemon.
@@ -51,7 +54,7 @@ func (m *Methods) List(req *ListRequest, resp *ListResponse) error {
 	} else {
 		addr := req.IP.To4()
 		ip := [4]byte{addr[0], addr[1], addr[2], addr[3]}
-		r := m.fluServer.ListFilesOnHost(&ip, uint16(m.fluServer.Port()))
+		r := m.fluServer.ListFilesOnHost(&ip, uint16(m.fluServer.Port()), req.Sha1Hash)
 		if r == nil {
 			return fmt.Errorf("No response from server")
 		}
