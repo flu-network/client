@@ -9,7 +9,8 @@ import (
 )
 
 // DiscoverHosts broadcasts a DiscoverHostRequest on the local network, collects responses for
-// a few seconds, and returns the collected results.
+// a few seconds, and returns the collected results. Both arguments are optional and serve as
+// filters.
 func (s *Server) DiscoverHosts(
 	hash *common.Sha1Hash,
 	chunks []uint16,
@@ -53,7 +54,10 @@ func (s *Server) DiscoverHosts(
 	}
 }
 
-func (s *Server) RespondToDiscoverHosts(req *messages.DiscoverHostRequest) []byte {
+func (s *Server) RespondToDiscoverHosts(
+	req *messages.DiscoverHostRequest,
+	returnAddr *net.UDPAddr,
+) error {
 	ip := s.LocalIP()
 	resp := messages.DiscoverHostResponse{
 		Address:   [4]byte{(*ip)[0], (*ip)[1], (*ip)[2], (*ip)[3]},
@@ -72,5 +76,5 @@ func (s *Server) RespondToDiscoverHosts(req *messages.DiscoverHostRequest) []byt
 		}
 	}
 
-	return resp.Serialize()
+	return s.sendToPeer(returnAddr.IP, resp.Serialize())
 }

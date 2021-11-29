@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/flu-network/client/catalogue"
+	"github.com/flu-network/client/common"
 	"github.com/flu-network/client/flu/messages"
 )
 
@@ -27,11 +28,26 @@ type Server struct {
 
 	resMap     map[requestKey]chan messages.Message
 	resMapLock sync.Mutex
+
+	downloads map[downloadKey]*RecvConnection
+	uploads   map[uploadKey]*SenderConnection
 }
 
+// requestKey is used to uniquely identify a request that is awaiting one or more responses in a
+// simplified request/response paradigm. E.g., host discovery, or one-off peer messages.
 type requestKey struct {
 	reqID       uint16
 	messageType uint8
+}
+
+type downloadKey struct {
+	hash       common.Sha1Hash
+	remoteHost ipv4
+}
+
+type uploadKey struct {
+	remoteHost ipv4
+	remotePort uint16
 }
 
 // NewServer returns a *Server
@@ -43,6 +59,8 @@ func NewServer(port int, cat *catalogue.Cat) *Server {
 		reqIDLock:  sync.Mutex{},
 		resMap:     make(map[requestKey](chan messages.Message)),
 		resMapLock: sync.Mutex{},
+		downloads:  map[downloadKey]*RecvConnection{},
+		uploads:    map[uploadKey]*SenderConnection{},
 	}
 }
 
@@ -70,6 +88,7 @@ func (s *Server) unregisterResponseChan(reqID uint16, msgType uint8) {
 	delete(s.resMap, key)
 }
 
+// deliverResponse delivers a response message to the goRoutine that originally sent the request
 func (s *Server) deliverResponse(reqID uint16, msg messages.Message) error {
 	key := requestKey{reqID: reqID, messageType: msg.Type()}
 	s.resMapLock.Lock()
@@ -81,6 +100,19 @@ func (s *Server) deliverResponse(reqID uint16, msg messages.Message) error {
 	return fmt.Errorf("ResponseChan {%d:%d} expired", reqID, msg)
 }
 
+func (s *Server) sendToPeer(ip net.IP, message []byte) error {
+	sock, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: ip, Port: s.port})
+	if err != nil {
+		return err
+	}
+	defer sock.Close()
+	_, err = sock.Write(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Port retuns the port the server is running on
 func (s *Server) Port() int {
 	return s.port
@@ -88,19 +120,21 @@ func (s *Server) Port() int {
 
 // HandleMessage does exactly what it says. It expects parameters to be passed by value because
 // it is assumed it will be run concurrently.
-func (s *Server) HandleMessage(message []byte, returnIP net.IP) error {
+func (s *Server) HandleMessage(message []byte, conn *net.UDPConn, returnAddr *net.UDPAddr) error {
 	parsedMessage, err := messages.Parse(message)
 	if err != nil {
 		return err
 	}
 
-	var reply []byte = nil
-
 	switch msg := parsedMessage.(type) {
 	case *messages.DiscoverHostRequest:
-		reply = s.RespondToDiscoverHosts(msg)
+		return s.RespondToDiscoverHosts(msg, returnAddr)
 	case *messages.ListFilesRequest:
-		reply = s.RespondToListFilesOnHost(msg)
+		return s.RespondToListFilesOnHost(msg, conn, returnAddr)
+	case *messages.OpenConnectionRequest:
+		return s.StartUpload(msg, conn, returnAddr)
+	case *messages.DataPacketAck:
+		return s.ContinueUpload(msg, conn, returnAddr)
 	case *messages.DiscoverHostResponse:
 		return s.deliverResponse(msg.RequestID, parsedMessage)
 	case *messages.ListFilesResponse:
@@ -110,19 +144,6 @@ func (s *Server) HandleMessage(message []byte, returnIP net.IP) error {
 	default:
 		panic("Rohan messed up! We parsed a message but couldn't handle it.")
 	}
-
-	// only reply if there's something to send
-	if reply != nil {
-		returnAddr := net.UDPAddr{IP: returnIP, Port: s.port, Zone: ""}
-		respSock, err := net.DialUDP("udp", nil, &returnAddr)
-		if err != nil {
-			return err
-		}
-		defer respSock.Close()
-		respSock.Write(reply)
-	}
-
-	return nil
 }
 
 // LocalIP returns the IPV4 address of the running process (if available). This is not the loopback
