@@ -29,13 +29,15 @@ Indexes, hosts and downloads files over LANs
 
 ### TODO:
 - implement transfer! This is it!
-- implement index cleaning (i.e., remove entries for missing files)
-- FTP benchmark:
-    [x] setup Anna's laptop with rsync (for code) as a second client
-        [ ] use `brew install inetutils`
-        [ ] set up ftp servers on both machines
-        [ ] this is our second benchmark 😰
-    [ ] use some bash scripting to automatically run our benchmarks from personal macbook
+    - Pick up by running `scripts/runDownloadTest.sh`
+    - Have the receiver stream its chunks to disk
+    - Have the sender maintain a set of 'unacked' messages to retransmit at the end
+        - unacked messages should have a data offset and data length
+    - wrap the chunk transmission up so it can run concurrently
+        - Use those fancy exclusive-range things you wrote in bitset to do this
+- Chunk size needs to be globally constant... 🤦‍♂️
+- Use merkel trees to 'patch' the chunks if they don't match
+
 
 ### Local Dev notes:
 - use `fn + f5` to run the client with debugging enabled in daemon mode
