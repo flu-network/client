@@ -75,7 +75,12 @@ func startDaemon() {
 			buffer := make([]byte, 1024)
 			_, returnAddress, err := c1.ReadFromUDP(buffer)
 			failHard(err)
-			go fluServer.HandleMessage(buffer, returnAddress.IP)
+			go func() {
+				err := fluServer.HandleMessage(buffer, c1, returnAddress)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
 		}
 	}()
 
