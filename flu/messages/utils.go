@@ -68,10 +68,15 @@ func (b *byteReader) readString256() string {
 
 // Serialization utilities
 
-// SerializeString256 serializaes the first 256 bytes of a string. Later bytes are ignored.
-func SerializeString256(s string) []byte {
-	result := make([]byte, 1+len(s))
-	resultLen := copy(result[1:], s)
+// SerializeString255 serializaes the first 255 bytes of a string. Later bytes are ignored.
+func SerializeString255(s string) []byte {
+	strLen := len(s)
+	if strLen > 255 {
+		strLen = 255
+	}
+	result := make([]byte, 1+strLen)
+
+	resultLen := copy(result[1:], s[:])
 	result[0] = uint8(resultLen)
 	return result
 }

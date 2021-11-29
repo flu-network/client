@@ -42,9 +42,30 @@ func TestDiscoverHostResponse(t *testing.T) {
 	}
 }
 
+func TestOpenLineRequest(t *testing.T) {
+	h := common.Sha1Hash{}
+	h.FromString("F10E2821BBBEA527EA02200352313BC059445190")
+	msg := &OpenConnectionRequest{
+		Sha1Hash:  &h,
+		Chunk:     654,
+		WindowCap: 213,
+	}
+
+	serialized := msg.Serialize()
+	result, err := Parse(serialized)
+	check(err, t)
+
+	if !reflect.DeepEqual(result, msg) {
+		t.Fatalf("msg does not match result. \nmsg:%v \nres:%v \n", msg, result)
+	}
+}
+
 func TestListFilesRequest(t *testing.T) {
+	h := common.Sha1Hash{}
+	h.FromString("F10E2821BBBEA527EA02200352313BC059445190")
 	msg := &ListFilesRequest{
 		RequestID: 123,
+		Sha1Hash:  &h,
 	}
 
 	serialized := msg.Serialize()

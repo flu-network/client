@@ -32,8 +32,10 @@ func Parse(data []byte) (msg Message, err error) {
 
 	case listFilesRequest:
 		reqID := reader.readUint16()
+		hash := reader.readSha1Hash()
 		return &ListFilesRequest{
 			RequestID: reqID,
+			Sha1Hash:  hash,
 		}, nil
 
 	case listFilesResponse:
@@ -54,6 +56,20 @@ func Parse(data []byte) (msg Message, err error) {
 			RequestID: reqID,
 			Files:     entries,
 		}, nil
+
+	case openLineRequest:
+		sha1Hash := reader.readSha1Hash()
+		chunk := reader.readUint16()
+		cap := reader.readByte()
+		return &OpenConnectionRequest{
+			Sha1Hash:  sha1Hash,
+			Chunk:     chunk,
+			WindowCap: cap,
+		}, nil
+
+	case dataPacketAck:
+		offset := reader.readUint32()
+		return &DataPacketAck{Offset: offset}, nil
 
 	default:
 		return nil, fmt.Errorf("Message of unknown type discarded: %d", msgType)

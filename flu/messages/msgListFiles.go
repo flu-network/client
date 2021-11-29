@@ -11,17 +11,21 @@ import (
 type ListFilesRequest struct {
 	// The requestID is only used by the client to tie a response to an outgoing request
 	RequestID uint16
+	Sha1Hash  *common.Sha1Hash
 }
 
 // Serialize converts its subject into a []byte for transmission over the wire
 func (r *ListFilesRequest) Serialize() []byte {
-	result := make([]byte, 3)
+	result := make([]byte, 23)
 
 	// message type
 	result[0] = listFilesRequest
 
 	// request ID
 	binary.BigEndian.PutUint16(result[1:3], r.RequestID)
+
+	// sha1 hash
+	copy(result[3:23], r.Sha1Hash.Data[:])
 
 	return result
 }
@@ -49,7 +53,7 @@ type ListFilesEntry struct {
 
 // Serialize converts its subject into a []byte for transmission over the wire
 func (lfe *ListFilesEntry) Serialize() []byte {
-	name := SerializeString256(lfe.FileName)
+	name := SerializeString255(lfe.FileName)
 	result := make([]byte, 40, len(name)+40)
 
 	binary.BigEndian.PutUint64(result[0:8], lfe.SizeInBytes)
