@@ -180,6 +180,43 @@ func (b *Bitset) filledRanges(start, end int) []uint16 {
 	return result
 }
 
+// UnfilledRanges returns a sorted, non-overlapping list of ranges of the underlying bitset that are
+// set to false.
+func (b *Bitset) UnfilledRanges() []uint16 {
+	start, end := 0, b.size
+	result := make([]uint16, 0, 2)
+	rStart, rEnd := start, start-1
+	for i := start; i <= end; i++ {
+		if !b.Get(uint64(i)) {
+			rEnd = i
+		} else {
+			if rEnd >= rStart {
+				result = append(result, uint16(rStart), uint16(rEnd))
+			}
+			rStart = i + 1
+		}
+	}
+	if rEnd >= rStart {
+		result = append(result, uint16(rStart), uint16(rEnd))
+	}
+	return result
+}
+
+// UnfilledItems returns the first `count` items in the bitset that are set to false. If there are
+// fewer than `count` items it returns that many.
+// TODO: this is super gross and inefficient... do something better
+func (b *Bitset) UnfilledItems(count int) []uint16 {
+	result := make([]uint16, 0, count)
+
+	for i := (uint64(0)); i < uint64(b.size) && len(result) < cap(result); i++ {
+		if !b.Get(i) {
+			result = append(result, uint16(i))
+		}
+	}
+
+	return result
+}
+
 // Serialize converts the bitset into a []byte so it can be transmitted somewhere. It makes a copy
 // of its underlying data, but is not threadsafe. If race conditions are possible it is the
 // caller's responsibility to maintain exclusivity.

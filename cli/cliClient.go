@@ -75,7 +75,7 @@ func (c *Client) Run(cmdArgs []string) {
 		if len(args) > 0 {
 			addr := net.ParseIP(args[0])
 			if addr == nil {
-				prettyPrintError(fmt.Errorf("Invalid IP Address: %s", args[0]))
+				prettyPrintError(fmt.Errorf("invalid IP Address: %s", args[0]))
 				return
 			}
 			req.IP = addr
