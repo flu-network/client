@@ -167,7 +167,22 @@ func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecord, error) {
 		result, err := c.fill(&record)
 		return result, err
 	}
-	return nil, fmt.Errorf("File not found")
+	return nil, fmt.Errorf("file not found")
+}
+
+// Get is the same as contains, except that if the record does not exist it will panic.
+func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecord {
+	result, err := c.Contains(hash)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (c *Cat) GetChunkReader(ir *IndexRecord, chunk int64) (*common.ChunkReader, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return ir.getChunkReader(chunk)
 }
 
 func (c *Cat) fill(rec *IndexRecord) (*IndexRecord, error) {

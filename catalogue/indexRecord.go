@@ -3,6 +3,8 @@ package catalogue
 import (
 	"bufio"
 	"crypto/sha1"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -22,6 +24,27 @@ type IndexRecord struct {
 	Sha1Hash     common.Sha1Hash
 	ProgressFile *ProgressFile
 	ChunkSize    int
+}
+
+// getChunkReader returns a ChunkReader. It should be called via the catalogue so we know it is
+// done safely. It is the caller's responsibility to ensure the ChunkReader is eventually closed.
+func (ir *IndexRecord) getChunkReader(chunk int64) (*common.ChunkReader, error) {
+	if !ir.ProgressFile.Progress.Get(uint64(chunk)) {
+		return nil, fmt.Errorf("missing requested chunk %d", chunk)
+	}
+
+	fd, err := os.Open(ir.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	start := chunk * int64(ir.ChunkSize)
+	secReader, err := io.NewSectionReader(fd, start, int64(ir.ChunkSize)), nil
+	if err != nil {
+		return nil, err
+	}
+
+	return common.NewChunkReader(secReader), nil
 }
 
 func generateIndexRecordForFile(path string) (*IndexRecord, error) {
