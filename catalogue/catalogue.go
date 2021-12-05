@@ -16,7 +16,7 @@ import (
 // the lock and then call private methods that assume the lock exists.
 type Cat struct {
 	DataDir   string
-	indexFile *IndexFile
+	indexFile *indexFile
 	lock      sync.Mutex
 }
 
@@ -41,7 +41,7 @@ func (c *Cat) Init() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.indexFile = &IndexFile{}
+	c.indexFile = &indexFile{}
 	err := c.indexFile.Init(c.DataDir)
 	if err != nil {
 		return err
@@ -50,9 +50,9 @@ func (c *Cat) Init() error {
 }
 
 // ShareFile generates an IndexRecord for the given filepath (unless an identical file has
-// already been shared) and refreshes the inderlying IndexFile. Sharing a file assumes that the
+// already been shared) and refreshes the inderlying indexFile. Sharing a file assumes that the
 // file has been downloaded completely.
-func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
+func (c *Cat) ShareFile(path string) (*indexRecord, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -66,8 +66,8 @@ func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
 		return nil, err
 	}
 
-	record.ProgressFile = NewProgressFile(record, c.DataDir)
-	record.ProgressFile.Progress.Fill()
+	record.ProgressFile = newProgressFile(record, c.DataDir)
+	record.ProgressFile.progress.Fill()
 	err = record.ProgressFile.save()
 	if err != nil {
 		return nil, err
@@ -78,16 +78,21 @@ func (c *Cat) ShareFile(path string) (*IndexRecord, error) {
 
 // UnshareFile immediately deletes all references to it from flu's index. Any transfers in progress
 // will throw errors and stop. The actual file is not affected in any way.
-func (c *Cat) UnshareFile(ir *IndexRecord) error {
+func (c *Cat) UnshareFile(hash *common.Sha1Hash) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	err := ir.ProgressFile.delete()
+	rec, err := c.getIndexRecord(hash)
 	if err != nil {
 		return err
 	}
 
-	err = c.indexFile.RemoveIndexRecord(ir)
+	err = rec.ProgressFile.delete()
+	if err != nil {
+		return err
+	}
+
+	err = c.indexFile.RemoveIndexRecord(rec)
 	if err != nil {
 		return err
 	}
@@ -104,7 +109,7 @@ func (c *Cat) RegisterDownload(
 	sha1Hash *common.Sha1Hash,
 	filename string,
 ) error {
-	indexRecord := IndexRecord{
+	indexRecord := indexRecord{
 		FilePath:     fmt.Sprintf("~/Downloads/%s", filename),
 		SizeInBytes:  int64(sizeInBytes),
 		Sha1Hash:     *sha1Hash,
@@ -117,7 +122,7 @@ func (c *Cat) RegisterDownload(
 		return err
 	}
 
-	indexRecord.ProgressFile = NewProgressFile(&indexRecord, c.DataDir)
+	indexRecord.ProgressFile = newProgressFile(&indexRecord, c.DataDir)
 	indexRecord.ProgressFile.save()
 	if err != nil {
 		return err
@@ -129,22 +134,22 @@ func (c *Cat) RegisterDownload(
 // ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
 // in their entirety. The result is a deep copy of the underlying catalogue data, so mutating it is
 // okay.
-func (c *Cat) ListFiles() ([]IndexRecord, error) {
+func (c *Cat) ListFiles() ([]IndexRecordExport, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	result := make([]IndexRecord, 0, len(c.indexFile.index))
+	result := make([]IndexRecordExport, 0, len(c.indexFile.index))
 
 	for _, rec := range c.indexFile.index {
 		fmt.Println(rec.FilePath)
 		if rec.ProgressFile == nil {
-			p, err := DeserializeProgressFile(&rec, c.DataDir)
+			p, err := deserializeProgressFile(&rec, c.DataDir)
 			if err != nil {
 				return nil, err
 			}
 			rec.ProgressFile = p
 		}
-		result = append(result, rec)
+		result = append(result, *rec.export())
 	}
 
 	return result, nil
@@ -152,26 +157,30 @@ func (c *Cat) ListFiles() ([]IndexRecord, error) {
 
 // Rehash attempts to recalculate the hash for a given indexRecord. If it fails, a blank hash and an
 // error are returned.
-func (c *Cat) Rehash(ir *IndexRecord) (*common.Sha1Hash, error) {
-	currentHash, err := hashFile(ir.FilePath)
+func (c *Cat) Rehash(hash *common.Sha1Hash) (*common.Sha1Hash, error) {
+	rec, err := c.getIndexRecord(hash)
+	if err != nil {
+		return nil, err
+	}
+	currentHash, err := hashFile(rec.FilePath)
 	if err != nil {
 		return (&common.Sha1Hash{}).Blank(), err
 	}
 	return currentHash, nil
 }
 
-// Contains returns the indexRecord of the file specified by the hash, or an error if the file
+// Contains returns the IndexRecordExport of the file specified by the hash, or an error if the file
 // cannot be accessed for any reason.
-func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecord, error) {
-	if record, found := c.indexFile.index[*hash]; found {
-		result, err := c.fill(&record)
-		return result, err
+func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecordExport, error) {
+	record, err := c.getIndexRecord(hash)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("file not found")
+	return record.export(), nil
 }
 
 // Get is the same as contains, except that if the record does not exist it will panic.
-func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecord {
+func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecordExport {
 	result, err := c.Contains(hash)
 	if err != nil {
 		panic(err)
@@ -179,15 +188,27 @@ func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecord {
 	return result
 }
 
-func (c *Cat) GetChunkReader(ir *IndexRecord, chunk int64) (*common.ChunkReader, error) {
+func (c *Cat) GetChunkReader(hash *common.Sha1Hash, chunk int64) (*common.ChunkReader, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	ir, err := c.getIndexRecord(hash)
+	if err != nil {
+		return nil, err
+	}
 	return ir.getChunkReader(chunk)
 }
 
-func (c *Cat) fill(rec *IndexRecord) (*IndexRecord, error) {
+func (c *Cat) getIndexRecord(hash *common.Sha1Hash) (*indexRecord, error) {
+	if record, found := c.indexFile.index[*hash]; found {
+		result, err := c.fill(&record)
+		return result, err
+	}
+	return nil, fmt.Errorf("file not found")
+}
+
+func (c *Cat) fill(rec *indexRecord) (*indexRecord, error) {
 	if rec.ProgressFile == nil {
-		p, err := DeserializeProgressFile(rec, c.DataDir)
+		p, err := deserializeProgressFile(rec, c.DataDir)
 		if err != nil {
 			return rec, err
 		}

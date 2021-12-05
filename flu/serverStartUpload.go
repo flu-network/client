@@ -19,7 +19,7 @@ func (s *Server) StartUpload(
 		return err
 	}
 
-	reader, err := s.cat.GetChunkReader(ir, int64(msg.Chunk))
+	reader, err := s.cat.GetChunkReader(&ir.Sha1Hash, int64(msg.Chunk))
 	if err != nil {
 		return err
 	}

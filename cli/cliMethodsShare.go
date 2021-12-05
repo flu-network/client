@@ -58,8 +58,8 @@ func (m *Methods) Share(req *ShareRequest, resp *ListItem) error {
 	resp.FilePath = record.FilePath
 	resp.SizeInBytes = record.SizeInBytes
 	resp.Sha1Hash = *record.Sha1Hash.Array()
-	resp.ChunkCount = record.ProgressFile.Progress.Size()
+	resp.ChunkCount = record.ProgressFile.Size()
 	resp.ChunkSizeInBytes = record.ChunkSize
-	resp.ChunksDownloaded = record.ProgressFile.Progress.Count()
+	resp.ChunksDownloaded = record.ProgressFile.Count()
 	return nil
 }

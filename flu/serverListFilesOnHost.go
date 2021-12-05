@@ -69,7 +69,7 @@ func (s *Server) RespondToListFilesOnHost(
 	conn *net.UDPConn,
 	returnAddr *net.UDPAddr,
 ) error {
-	var files []catalogue.IndexRecord
+	var files []catalogue.IndexRecordExport
 	var err error
 
 	if req.Sha1Hash.IsBlank() {
@@ -93,9 +93,9 @@ func (s *Server) RespondToListFilesOnHost(
 		_, fileName := path.Split(f.FilePath)
 		resp.Files[i] = messages.ListFilesEntry{
 			SizeInBytes:      uint64(f.SizeInBytes),
-			ChunkCount:       uint32(f.ProgressFile.Progress.Size()),
+			ChunkCount:       uint32(f.ProgressFile.Size()),
 			ChunkSizeInBytes: uint32(f.ChunkSize),
-			ChunksDownloaded: uint32(f.ProgressFile.Progress.Count()),
+			ChunksDownloaded: uint32(f.ProgressFile.Count()),
 			Sha1Hash:         &f.Sha1Hash,
 			FileName:         fileName,
 		}

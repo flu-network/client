@@ -13,18 +13,18 @@ import (
 
 func TestMarshalling(t *testing.T) {
 	// create a rich test subject
-	subject := IndexFile{
+	subject := indexFile{
 		pid:         10293,
 		lastTouched: 1630892423,
-		index:       map[common.Sha1Hash]IndexRecord{},
+		index:       map[common.Sha1Hash]indexRecord{},
 	}
-	subject.index[*sha1HashString("cat")] = IndexRecord{
+	subject.index[*sha1HashString("cat")] = indexRecord{
 		FilePath:     "path/to/file1.dat",
 		SizeInBytes:  123456,
 		Sha1Hash:     *sha1HashString("cat"),
 		ProgressFile: nil,
 	}
-	subject.index[*sha1HashString("bat")] = IndexRecord{
+	subject.index[*sha1HashString("bat")] = indexRecord{
 		FilePath:     "path/to/file2.mkv",
 		SizeInBytes:  13243546,
 		Sha1Hash:     *sha1HashString("bat"),
@@ -38,7 +38,7 @@ func TestMarshalling(t *testing.T) {
 	}
 
 	// deserialize it
-	result := IndexFile{}
+	result := indexFile{}
 	result.UnmarshalJSON(data)
 
 	// check they're exactly equal
@@ -60,7 +60,7 @@ func TestInit(t *testing.T) {
 	t.Run("Works when file does not already exist", func(t *testing.T) {
 		cleanup()
 		defer cleanup()
-		indexFile := &IndexFile{}
+		indexFile := &indexFile{}
 		err := indexFile.Init(dataDir)
 
 		if err != nil {

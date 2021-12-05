@@ -12,22 +12,22 @@ import (
 
 const indexFileName = "index.json"
 
-// IndexFile is the in-memory representation of the index. The index maps the sha1 hash of a file
+// indexFile is the in-memory representation of the index. The index maps the sha1 hash of a file
 // to the IndexRecord associated with that file. All methods assume the caller has acquired
 // a mutex granting exclusive access.
-type IndexFile struct {
+type indexFile struct {
 	// returns the pid of the process that created the file. The index file can be 'claimed' by the
 	// running process if the pid matches OR the file has not been touched for 30 seconds. The
 	// owner is expected update the file's lastTouched every few seconds (<< 30)
 	pid         int
 	lastTouched int64 // should be updated regularly by the owner
-	index       map[common.Sha1Hash]IndexRecord
+	index       map[common.Sha1Hash]indexRecord
 	dataDir     string
 }
 
 // Init attempts to safely claim ownnership of the index file if it already exists. If it
 // does not exist, an index file is created.
-func (ind *IndexFile) Init(dataDir string) error {
+func (ind *indexFile) Init(dataDir string) error {
 	// ensure directory exists
 	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
 		return err
@@ -50,7 +50,7 @@ func (ind *IndexFile) Init(dataDir string) error {
 			// create it if it doesn't exist
 			ind.pid = os.Getpid()
 			ind.lastTouched = time.Now().Unix()
-			ind.index = map[common.Sha1Hash]IndexRecord{}
+			ind.index = map[common.Sha1Hash]indexRecord{}
 			ind.dataDir = dataDir
 
 			err := ind.save()
@@ -73,7 +73,7 @@ func (ind *IndexFile) Init(dataDir string) error {
 	return err
 }
 
-func (ind *IndexFile) save() error {
+func (ind *indexFile) save() error {
 	data, err := json.Marshal(ind)
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (ind *IndexFile) save() error {
 // AddIndexRecord adds an indexRecord to the underlying file, and reloads the in-memory
 // representation of the data so that change is reflected. If an identical file has already been
 // shared, this will safely return an error
-func (ind *IndexFile) AddIndexRecord(record *IndexRecord) error {
+func (ind *indexFile) AddIndexRecord(record *indexRecord) error {
 	if extantRecord, exists := ind.index[record.Sha1Hash]; exists {
 		return fmt.Errorf("Identical file already shared: %s", extantRecord.FilePath)
 	}
@@ -101,13 +101,13 @@ func (ind *IndexFile) AddIndexRecord(record *IndexRecord) error {
 
 // RemoveIndexRecord removes an indexRecord from the underlying file, and reloads the in-memory
 // representation of the data so that change is reflected.
-func (ind *IndexFile) RemoveIndexRecord(record *IndexRecord) error {
+func (ind *indexFile) RemoveIndexRecord(record *indexRecord) error {
 	delete(ind.index, record.Sha1Hash)
 	return ind.save()
 }
 
 // MarshalJSON conforms to the Marshaler interface
-func (ind *IndexFile) MarshalJSON() ([]byte, error) {
+func (ind *indexFile) MarshalJSON() ([]byte, error) {
 	intermediary := indexFileJSON{
 		Pid:         ind.pid,
 		LastTouched: ind.lastTouched,
@@ -123,8 +123,8 @@ func (ind *IndexFile) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON conforms to the Marshaler interface. Does not fill out pointers to the underlying
-// ProgressFiles within individual IndexRecords.
-func (ind *IndexFile) UnmarshalJSON(data []byte) error {
+// ProgressFiles within individual indexRecords.
+func (ind *indexFile) UnmarshalJSON(data []byte) error {
 	intermediary := indexFileJSON{}
 	err := json.Unmarshal(data, &intermediary)
 	if err != nil {
@@ -133,7 +133,7 @@ func (ind *IndexFile) UnmarshalJSON(data []byte) error {
 
 	ind.pid = intermediary.Pid
 	ind.lastTouched = intermediary.LastTouched
-	ind.index = make(map[common.Sha1Hash]IndexRecord)
+	ind.index = make(map[common.Sha1Hash]indexRecord)
 	ind.dataDir = intermediary.DataDir
 
 	for str, indexRecord := range intermediary.Index {
@@ -153,7 +153,7 @@ func (ind *IndexFile) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// indexFileJSON is a private intermediary representation of an IndexFile for JSON encoding
+// indexFileJSON is a private intermediary representation of an indexFile for JSON encoding
 type indexFileJSON struct {
 	Pid         int
 	LastTouched int64

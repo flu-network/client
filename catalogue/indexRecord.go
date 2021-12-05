@@ -13,23 +13,44 @@ import (
 
 const defaultChunkSize = int(1 << 22) // 4mb in bytes
 
-// IndexRecord describes a file that is 'known' by the flu client. The existence of an IndexRecord
+// indexRecord describes a file that is 'known' by the flu client. The existence of an indexRecord
 // does not imply that the file exists locally. To find out which chunks of the file are
 // downloaded, consult the progressFile. By convention, the progressFile is always named after
 // the sha1 of the completely-downloaded file.
 // All methods assume the caller has acquired a mutex granting exclusive access.
-type IndexRecord struct {
+type indexRecord struct {
 	FilePath     string
 	SizeInBytes  int64
 	Sha1Hash     common.Sha1Hash
-	ProgressFile *ProgressFile
+	ProgressFile *progressFile
 	ChunkSize    int
+}
+
+// IndexRecordExport is a copy of an underlying indexRecord intended for read-only access.
+// Manipulations should be performed via an appropriate catalogue method.
+type IndexRecordExport struct {
+	FilePath     string
+	SizeInBytes  int64
+	Sha1Hash     common.Sha1Hash
+	ProgressFile progressFile
+	ChunkSize    int
+}
+
+// export returns an IndexRecordExport, which is safe for consumption outside of the catalogue
+func (ir *indexRecord) export() *IndexRecordExport {
+	return &IndexRecordExport{
+		FilePath:     ir.FilePath,
+		SizeInBytes:  ir.SizeInBytes,
+		Sha1Hash:     ir.Sha1Hash,
+		ProgressFile: *ir.ProgressFile,
+		ChunkSize:    ir.ChunkSize,
+	}
 }
 
 // getChunkReader returns a ChunkReader. It should be called via the catalogue so we know it is
 // done safely. It is the caller's responsibility to ensure the ChunkReader is eventually closed.
-func (ir *IndexRecord) getChunkReader(chunk int64) (*common.ChunkReader, error) {
-	if !ir.ProgressFile.Progress.Get(uint64(chunk)) {
+func (ir *indexRecord) getChunkReader(chunk int64) (*common.ChunkReader, error) {
+	if !ir.ProgressFile.progress.Get(uint64(chunk)) {
 		return nil, fmt.Errorf("missing requested chunk %d", chunk)
 	}
 
@@ -47,7 +68,7 @@ func (ir *IndexRecord) getChunkReader(chunk int64) (*common.ChunkReader, error) 
 	return common.NewChunkReader(secReader), nil
 }
 
-func generateIndexRecordForFile(path string) (*IndexRecord, error) {
+func generateIndexRecordForFile(path string) (*indexRecord, error) {
 	cleanPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -63,7 +84,7 @@ func generateIndexRecordForFile(path string) (*IndexRecord, error) {
 		return nil, err
 	}
 
-	return &IndexRecord{
+	return &indexRecord{
 		FilePath:     cleanPath,
 		SizeInBytes:  fileStats.Size(),
 		Sha1Hash:     *hash,
@@ -91,7 +112,7 @@ func hashFile(path string) (*common.Sha1Hash, error) {
 }
 
 // toJSON returns an indexRecordJSON, which can natively be marshalled into JSON
-func (ir *IndexRecord) toJSON() *indexRecordJSON {
+func (ir *indexRecord) toJSON() *indexRecordJSON {
 	return &indexRecordJSON{
 		FilePath:    ir.FilePath,
 		SizeInBytes: ir.SizeInBytes,
@@ -101,8 +122,8 @@ func (ir *IndexRecord) toJSON() *indexRecordJSON {
 }
 
 // UnmarshalJSON conforms to the Marshaler interface
-func (irj *indexRecordJSON) fromJSON() (*IndexRecord, error) {
-	result := IndexRecord{
+func (irj *indexRecordJSON) fromJSON() (*indexRecord, error) {
+	result := indexRecord{
 		FilePath:     irj.FilePath,
 		SizeInBytes:  irj.SizeInBytes,
 		Sha1Hash:     common.Sha1Hash{},
@@ -117,7 +138,7 @@ func (irj *indexRecordJSON) fromJSON() (*IndexRecord, error) {
 	return &result, nil
 }
 
-// indexRecordJSON is a private intermediary representation of an IndexRecord for JSON encoding. It
+// indexRecordJSON is a private intermediary representation of an indexRecord for JSON encoding. It
 // does not store a pointer to a progress file, since the FilePath is exactly that.
 type indexRecordJSON struct {
 	FilePath    string
