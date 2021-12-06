@@ -15,9 +15,9 @@ import (
 
 // Defaults. Can be overridden by user
 const catalogueDir = "/usr/local/var/flu-network/catalogue" // TODO: make cross-platform
-const sockaddr = "/tmp/flu-network.sock"                    // for cli communication
-const tcpPort = 61697                                       // port 'f101' in hex
-const udpPort = 61696                                       // port "f100" in hex
+const downloadsDir = "/Users/tubby/Downloads"
+const sockaddr = "/tmp/flu-network.sock" // for cli communication
+const udpPort = 61696                    // port "f100" in hex
 
 func main() {
 	daemonMode := flag.Bool("d", false, "-d")
@@ -34,7 +34,7 @@ func main() {
 }
 
 func startDaemon() {
-	cat, err := catalogue.NewCat(catalogueDir)
+	cat, err := catalogue.NewCat(catalogueDir, downloadsDir)
 	failHard(err)
 	failHard(cat.Init())
 	fluServer := flu.NewServer(udpPort, cat)

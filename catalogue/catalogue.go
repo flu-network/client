@@ -15,20 +15,28 @@ import (
 // Most file-system access should be performed with a mutex lock. Public methods simply acquire
 // the lock and then call private methods that assume the lock exists.
 type Cat struct {
-	DataDir   string
-	indexFile *indexFile
-	lock      sync.Mutex
+	DataDir             string
+	DefaultDownloadsDir string
+	indexFile           *indexFile
+	lock                sync.Mutex
 }
 
 // NewCat returns a Cat struct, initialized to the given data directory
-func NewCat(dir string) (*Cat, error) {
+func NewCat(dir, downloadsDir string) (*Cat, error) {
 	cleanPath, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
+
+	cleanDownloadsDir, err := filepath.Abs(downloadsDir)
+	if err != nil {
+		return nil, err
+	}
 	return &Cat{
-		DataDir:   cleanPath,
-		indexFile: nil,
+		DataDir:             cleanPath,
+		DefaultDownloadsDir: cleanDownloadsDir,
+		indexFile:           nil,
+		lock:                sync.Mutex{},
 	}, nil
 }
 
@@ -108,9 +116,9 @@ func (c *Cat) RegisterDownload(
 	chunkSizeInBytes uint32,
 	sha1Hash *common.Sha1Hash,
 	filename string,
-) error {
+) (*IndexRecordExport, error) {
 	indexRecord := indexRecord{
-		FilePath:     fmt.Sprintf("~/Downloads/%s", filename),
+		FilePath:     filepath.Join(c.DefaultDownloadsDir, filename),
 		SizeInBytes:  int64(sizeInBytes),
 		Sha1Hash:     *sha1Hash,
 		ProgressFile: nil,
@@ -141,7 +149,6 @@ func (c *Cat) ListFiles() ([]IndexRecordExport, error) {
 	result := make([]IndexRecordExport, 0, len(c.indexFile.index))
 
 	for _, rec := range c.indexFile.index {
-		fmt.Println(rec.FilePath)
 		if rec.ProgressFile == nil {
 			p, err := deserializeProgressFile(&rec, c.DataDir)
 			if err != nil {
