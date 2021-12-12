@@ -3,6 +3,9 @@ package bitset
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
+
+	"github.com/flu-network/client/common"
 )
 
 const wordSize = 64
@@ -182,22 +185,22 @@ func (b *Bitset) filledRanges(start, end int) []uint16 {
 
 // UnfilledRanges returns a sorted, non-overlapping list of ranges of the underlying bitset that are
 // set to false.
-func (b *Bitset) UnfilledRanges() []uint16 {
+func (b *Bitset) UnfilledRanges() []common.Range {
 	start, end := 0, b.size
-	result := make([]uint16, 0, 2)
+	result := make([]common.Range, 0, 1)
 	rStart, rEnd := start, start-1
-	for i := start; i <= end; i++ {
+	for i := start; i < end; i++ {
 		if !b.Get(uint64(i)) {
 			rEnd = i
 		} else {
 			if rEnd >= rStart {
-				result = append(result, uint16(rStart), uint16(rEnd))
+				result = append(result, common.NewRange(uint16(rStart), uint16(rEnd)))
 			}
 			rStart = i + 1
 		}
 	}
 	if rEnd >= rStart {
-		result = append(result, uint16(rStart), uint16(rEnd))
+		result = append(result, common.NewRange(uint16(rStart), uint16(rEnd)))
 	}
 	return result
 }
@@ -215,6 +218,36 @@ func (b *Bitset) UnfilledItems(count int) []uint16 {
 	}
 
 	return result
+}
+
+// Print returns a 0/1-formatted string representation of the underlying bitset
+func (b *Bitset) Print() string {
+	result := strings.Builder{}
+
+	for segmentIndex := range b.data {
+		for i := uint64(0); i < uint64(64); i++ {
+			if (uint64(segmentIndex)*64 + i) < uint64(b.size) {
+				if !b.Get(i) {
+					result.WriteRune('0')
+				} else {
+					result.WriteRune('1')
+				}
+			} else {
+				if !b.Get(i) {
+					result.WriteRune('º')
+				} else {
+					result.WriteRune('|')
+				}
+			}
+		}
+		result.WriteRune('\n')
+	}
+
+	return result.String()
+}
+
+func (b *Bitset) Deb() []uint64 {
+	return b.data
 }
 
 // Serialize converts the bitset into a []byte so it can be transmitted somewhere. It makes a copy
@@ -239,7 +272,7 @@ func Deserialize(data []byte) (*Bitset, error) {
 	size := int(binary.BigEndian.Uint64(data[:8]))
 
 	if l := len(data[8:]); l%8 != 0 {
-		return nil, fmt.Errorf("Data segment of bitset data must be a multiple of 8. Got %d", l)
+		return nil, fmt.Errorf("data segment of bitset data must be a multiple of 8. Got %d", l)
 	}
 
 	setData := make([]uint64, len(data[8:])/8)

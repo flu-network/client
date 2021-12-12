@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/flu-network/client/common"
 )
 
 const (
@@ -118,6 +120,12 @@ func TestBitsetFillAndFull(t *testing.T) {
 		b1 := NewBitset(0)
 		if !b1.Full() {
 			t.Fatalf("an empty bitset of size 0 should be full")
+		}
+
+		b1 = NewBitset(1)
+		b1.Set(0)
+		if !b1.Full() {
+			t.Fatalf("an full bitset of size 1 should be full")
 		}
 
 		b1.Set(15)
@@ -292,6 +300,71 @@ func TestOverlap(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.desc, func(t *testing.T) {
 			result := testCase.bitset.Overlap(testCase.input)
+			if !reflect.DeepEqual(result, testCase.output) {
+				t.Fatalf("Expected %v to equal %v\n", result, testCase.output)
+			}
+		})
+	}
+}
+
+func TestRanges(t *testing.T) {
+	type expectation struct {
+		desc   string
+		bitset Bitset
+		output []common.Range
+	}
+
+	testCases := []expectation{
+		{
+			desc:   "single empty",
+			bitset: *NewBitset(1),
+			output: []common.Range{common.NewRange(0, 0)},
+		},
+		{
+			desc:   "single filled",
+			bitset: *NewBitset(1).Fill(),
+			output: make([]common.Range, 0, 2),
+		},
+		{
+			desc:   "left single empty",
+			bitset: *NewBitset(10).Fill().Unset(0),
+			output: []common.Range{common.NewRange(0, 0)},
+		},
+		{
+			desc:   "left many empty",
+			bitset: *NewBitset(10).Fill().Unset(0).Unset(1),
+			output: []common.Range{common.NewRange(0, 1)},
+		},
+		{
+			desc:   "right single empty",
+			bitset: *NewBitset(10).Fill().Unset(9),
+			output: []common.Range{common.NewRange(9, 9)},
+		},
+		{
+			desc:   "right many empty",
+			bitset: *NewBitset(10).Fill().Unset(9).Unset(8),
+			output: []common.Range{common.NewRange(8, 9)},
+		},
+		{
+			desc:   "mid single empty",
+			bitset: *NewBitset(10).Fill().Unset(4),
+			output: []common.Range{common.NewRange(4, 4)},
+		},
+		{
+			desc:   "mid multiple empty",
+			bitset: *NewBitset(10).Fill().Unset(4).Unset(5),
+			output: []common.Range{common.NewRange(4, 5)},
+		},
+		{
+			desc:   "mid disjoint empty",
+			bitset: *NewBitset(10).Fill().Unset(2).Unset(3).Unset(5),
+			output: []common.Range{common.NewRange(2, 3), common.NewRange(5, 5)},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			result := testCase.bitset.UnfilledRanges()
 			if !reflect.DeepEqual(result, testCase.output) {
 				t.Fatalf("Expected %v to equal %v\n", result, testCase.output)
 			}
