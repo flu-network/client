@@ -17,20 +17,27 @@ const maxRequestID = int(1 << 16)
 // incoming UDP message to a previous outgoing message, thereby providing a request/response
 // paradigm when needed. Every request/response is tagged with a monotonically-increasing requestID
 // so many conversations can occur concurrently.
-// All incoming UDP messages should be sent to Server for handling, and all outdoing UDP messages
-// sent from here.
+// All incoming UDP messages should be sent to Server for handling.
 type Server struct {
 	port int
 	cat  *catalogue.Cat
 
+	// reqID and reqIDLock are responsible for generating locally-unique request IDs for incoming
+	// outgoing request-response communications between peers
 	reqID     int
 	reqIDLock sync.Mutex
 
+	// resMap and resMapLock are responsible for mapping outgoing requests to incoming responses.
+	// They map an outgoing requestID and response type to an incoming message and deliver the
+	// response to the Message chan stored in the map.
 	resMap     map[requestKey]chan messages.Message
 	resMapLock sync.Mutex
 
-	downloads map[downloadKey]*RecvConnection
-	uploads   map[uploadKey]*SenderConnection
+	// transfer lock, downloads and uploads ensures safe access to the download and upload maps.
+	// These maps are used to keep track on ongoing transfers, irrespective of their state.
+	transferLock sync.Mutex
+	downloads    map[downloadKey]struct{} // corresponds to a single chunk from a single host
+	uploads      map[uploadKey]*SenderConnection
 }
 
 // requestKey is used to uniquely identify a request that is awaiting one or more responses in a
@@ -53,14 +60,15 @@ type uploadKey struct {
 // NewServer returns a *Server
 func NewServer(port int, cat *catalogue.Cat) *Server {
 	return &Server{
-		port:       port,
-		cat:        cat,
-		reqID:      0,
-		reqIDLock:  sync.Mutex{},
-		resMap:     make(map[requestKey](chan messages.Message)),
-		resMapLock: sync.Mutex{},
-		downloads:  map[downloadKey]*RecvConnection{},
-		uploads:    map[uploadKey]*SenderConnection{},
+		port:         port,
+		cat:          cat,
+		reqID:        0,
+		reqIDLock:    sync.Mutex{},
+		resMap:       make(map[requestKey](chan messages.Message)),
+		resMapLock:   sync.Mutex{},
+		transferLock: sync.Mutex{},
+		downloads:    make(map[downloadKey]struct{}),
+		uploads:      make(map[uploadKey]*SenderConnection),
 	}
 }
 

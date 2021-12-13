@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/flu-network/client/common"
 	"github.com/flu-network/client/flu/messages"
@@ -55,11 +56,13 @@ func DialPeer(ip [4]byte, port uint16, hash *common.Sha1Hash, chunk uint16) (*Re
 	go func() {
 		for {
 			buffer := make([]byte, 1029) // NOT 1024: the serialization overhead is 5 bytes
+			result.conn.SetReadDeadline(time.Now().Add(time.Second * 5))
 			n, _, err := result.conn.ReadFromUDP(buffer)
 			if err != nil {
 				result.conn.Close()
 				result.outChan <- nil
-				panic(err) // TODO: handle and break
+				fmt.Printf("Connection closed: %v-%d:%v\n", hash, chunk, err)
+				break
 			} else {
 				result.outChan <- messages.ParseAsDataPacket(buffer[:n])
 			}
