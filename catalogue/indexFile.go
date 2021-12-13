@@ -21,7 +21,7 @@ type indexFile struct {
 	// owner is expected update the file's lastTouched every few seconds (<< 30)
 	pid         int
 	lastTouched int64 // should be updated regularly by the owner
-	index       map[common.Sha1Hash]indexRecord
+	index       map[common.Sha1Hash]*indexRecord
 	dataDir     string
 }
 
@@ -50,7 +50,7 @@ func (ind *indexFile) Init(dataDir string) error {
 			// create it if it doesn't exist
 			ind.pid = os.Getpid()
 			ind.lastTouched = time.Now().Unix()
-			ind.index = map[common.Sha1Hash]indexRecord{}
+			ind.index = map[common.Sha1Hash]*indexRecord{}
 			ind.dataDir = dataDir
 
 			err := ind.save()
@@ -93,9 +93,9 @@ func (ind *indexFile) save() error {
 // shared, this will safely return an error
 func (ind *indexFile) AddIndexRecord(record *indexRecord) error {
 	if extantRecord, exists := ind.index[record.Sha1Hash]; exists {
-		return fmt.Errorf("Identical file already shared: %s", extantRecord.FilePath)
+		return fmt.Errorf("identical file already shared: %s", extantRecord.FilePath)
 	}
-	ind.index[record.Sha1Hash] = *record
+	ind.index[record.Sha1Hash] = record
 	return ind.save()
 }
 
@@ -133,7 +133,7 @@ func (ind *indexFile) UnmarshalJSON(data []byte) error {
 
 	ind.pid = intermediary.Pid
 	ind.lastTouched = intermediary.LastTouched
-	ind.index = make(map[common.Sha1Hash]indexRecord)
+	ind.index = make(map[common.Sha1Hash]*indexRecord)
 	ind.dataDir = intermediary.DataDir
 
 	for str, indexRecord := range intermediary.Index {
@@ -147,7 +147,7 @@ func (ind *indexFile) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
-		ind.index[hash] = *decoded
+		ind.index[hash] = decoded
 	}
 
 	return nil

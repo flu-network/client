@@ -3,6 +3,7 @@ package catalogue
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/flu-network/client/common/bitset"
 )
@@ -12,23 +13,36 @@ import (
 // in the set are 'on'. Serialization and deserialization methods assume the caller has already
 // obtained a mutex, to avoid writing while reading
 type progressFile struct {
+	lock     sync.Mutex
 	progress bitset.Bitset
 	filePath string
 }
 
 // Full returns true if all items between 0:size are set to true, and false if not.
 func (p *progressFile) Full() bool {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	return p.progress.Full()
+}
+
+func (p *progressFile) Set(index uint64) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.progress.Set(index)
 }
 
 // Size returns the number of elements in the bitset, both set and unset. Size is always
 // non-negative
 func (p *progressFile) Size() int {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	return p.progress.Size()
 }
 
 // Count returns the number of elements in the bitset that are set (true)
 func (p *progressFile) Count() int {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	return p.progress.Count()
 }
 
@@ -36,13 +50,23 @@ func (p *progressFile) Count() int {
 // numbers represents an inclusive range [start, end] of bits. The return value is a sorted list of
 // non-overallping ranges that are set to 'on' within the underlying bitset
 func (p *progressFile) Overlap(ranges []uint16) []uint16 {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	return p.progress.Overlap(ranges)
 }
 
 // Ranges returns a sorted, non-overallping list of ranges of the underlying bitset that are set to
 // true.
 func (p *progressFile) Ranges() []uint16 {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	return p.progress.Ranges()
+}
+
+func (p *progressFile) UnfilledItems(count int) []uint16 {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	return p.progress.UnfilledItems(count)
 }
 
 // newProgressFile returns a new progressFile for the given IndexRecord, assuming the IndexRecord
@@ -55,6 +79,7 @@ func newProgressFile(record *indexRecord, dataDir string) *progressFile {
 	}
 	set := *bitset.NewBitset(int(chunkCount))
 	return &progressFile{
+		lock:     sync.Mutex{},
 		progress: set,
 		filePath: filepath.Join(dataDir, record.Sha1Hash.String()),
 	}
@@ -90,6 +115,7 @@ func deserializeProgressFile(record *indexRecord, dataDir string) (*progressFile
 	}
 
 	return &progressFile{
+		lock:     sync.Mutex{},
 		progress: *set,
 		filePath: progressFilePath,
 	}, nil

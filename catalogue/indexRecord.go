@@ -27,7 +27,10 @@ type indexRecord struct {
 }
 
 // IndexRecordExport is a copy of an underlying indexRecord intended for read-only access.
-// Manipulations should be performed via an appropriate catalogue method.
+// Manipulations should be performed via an appropriate catalogue method. Note that since this is
+// a copy, once it is created, there is no guarantee that its state is an accurate reflection of
+// the underlying object it represents. For strong guarantees of consistency, use the appropriate
+// method on the catalogue.
 type IndexRecordExport struct {
 	FilePath     string
 	SizeInBytes  int64
@@ -42,9 +45,26 @@ func (ir *indexRecord) export() *IndexRecordExport {
 		FilePath:     ir.FilePath,
 		SizeInBytes:  ir.SizeInBytes,
 		Sha1Hash:     ir.Sha1Hash,
-		ProgressFile: *ir.ProgressFile,
+		ProgressFile: *ir.ProgressFile, // TODO: export a plain bitset instead of this fanciness
 		ChunkSize:    ir.ChunkSize,
 	}
+}
+
+func (ir *indexRecord) saveChunk(chunk int64, data []byte) error {
+	fd, err := os.OpenFile(ir.FilePath, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	start := chunk * int64(ir.ChunkSize)
+	wrote, err := fd.WriteAt(data, start)
+	if err != nil {
+		return err
+	}
+	if wrote != len(data) {
+		return fmt.Errorf("wrote only %d of %d bytes", wrote, len(data))
+	}
+	return nil
 }
 
 // getChunkReader returns a ChunkReader. It should be called via the catalogue so we know it is

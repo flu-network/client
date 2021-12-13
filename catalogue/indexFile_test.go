@@ -16,15 +16,15 @@ func TestMarshalling(t *testing.T) {
 	subject := indexFile{
 		pid:         10293,
 		lastTouched: 1630892423,
-		index:       map[common.Sha1Hash]indexRecord{},
+		index:       map[common.Sha1Hash]*indexRecord{},
 	}
-	subject.index[*sha1HashString("cat")] = indexRecord{
+	subject.index[*sha1HashString("cat")] = &indexRecord{
 		FilePath:     "path/to/file1.dat",
 		SizeInBytes:  123456,
 		Sha1Hash:     *sha1HashString("cat"),
 		ProgressFile: nil,
 	}
-	subject.index[*sha1HashString("bat")] = indexRecord{
+	subject.index[*sha1HashString("bat")] = &indexRecord{
 		FilePath:     "path/to/file2.mkv",
 		SizeInBytes:  13243546,
 		Sha1Hash:     *sha1HashString("bat"),

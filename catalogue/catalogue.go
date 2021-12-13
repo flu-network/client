@@ -117,6 +117,9 @@ func (c *Cat) RegisterDownload(
 	sha1Hash *common.Sha1Hash,
 	filename string,
 ) (*IndexRecordExport, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	indexRecord := indexRecord{
 		FilePath:     filepath.Join(c.DefaultDownloadsDir, filename),
 		SizeInBytes:  int64(sizeInBytes),
@@ -127,16 +130,16 @@ func (c *Cat) RegisterDownload(
 
 	err := c.indexFile.AddIndexRecord(&indexRecord)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	indexRecord.ProgressFile = newProgressFile(&indexRecord, c.DataDir)
 	indexRecord.ProgressFile.save()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return indexRecord.export(), nil
 }
 
 // ListFiles lists the files that exist in the catalogue. Not all indexed files have been downloaded
@@ -150,7 +153,7 @@ func (c *Cat) ListFiles() ([]IndexRecordExport, error) {
 
 	for _, rec := range c.indexFile.index {
 		if rec.ProgressFile == nil {
-			p, err := deserializeProgressFile(&rec, c.DataDir)
+			p, err := deserializeProgressFile(rec, c.DataDir)
 			if err != nil {
 				return nil, err
 			}
@@ -188,11 +191,50 @@ func (c *Cat) Contains(hash *common.Sha1Hash) (*IndexRecordExport, error) {
 
 // Get is the same as contains, except that if the record does not exist it will panic.
 func (c *Cat) Get(hash *common.Sha1Hash) *IndexRecordExport {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	result, err := c.Contains(hash)
 	if err != nil {
 		panic(err)
 	}
 	return result
+}
+
+func (c *Cat) FileComplete(hash *common.Sha1Hash) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	ir, err := c.getIndexRecord(hash)
+	if err != nil {
+		panic(err)
+	}
+	return ir.ProgressFile.Full()
+}
+
+func (c *Cat) MissingChunks(hash *common.Sha1Hash, maxCount int) []common.Range {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	ir, err := c.getIndexRecord(hash)
+	if err != nil {
+		panic(err)
+	}
+	return ir.ProgressFile.progress.UnfilledRanges()
+}
+
+func (c *Cat) SaveChunk(hash *common.Sha1Hash, chunk uint16, data []byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	ir, err := c.getIndexRecord(hash)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ir.saveChunk(int64(chunk), data)
+	if err != nil {
+		return err
+	}
+
+	ir.ProgressFile.Set(uint64(chunk))
+	return ir.ProgressFile.save()
 }
 
 func (c *Cat) GetChunkReader(hash *common.Sha1Hash, chunk int64) (*common.ChunkReader, error) {
@@ -207,7 +249,7 @@ func (c *Cat) GetChunkReader(hash *common.Sha1Hash, chunk int64) (*common.ChunkR
 
 func (c *Cat) getIndexRecord(hash *common.Sha1Hash) (*indexRecord, error) {
 	if record, found := c.indexFile.index[*hash]; found {
-		result, err := c.fill(&record)
+		result, err := c.fill(record)
 		return result, err
 	}
 	return nil, fmt.Errorf("file not found")
