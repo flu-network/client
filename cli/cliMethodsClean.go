@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 	"strings"
-
-	"github.com/flu-network/client/common"
 )
 
 // CleanRequest is just a signal to the daemon. It contains no specific information
@@ -15,28 +13,12 @@ type CleanResponseItem struct {
 	FilePath        string
 	IndexedSha1Hash [20]byte
 	CurrentSha1Hash [20]byte // If null, file is missing. If different, file is corrupted.
+	ActionTaken     string
 }
 
 // Sprintf returns a pretty-printed, user-facing string representation of a CleanResponseItem
 func (r *CleanResponseItem) Sprintf() string {
-	var result strings.Builder
-	indexedHash := (&common.Sha1Hash{}).FromSlice(r.IndexedSha1Hash[:])
-	currentHash := (&common.Sha1Hash{}).FromSlice(r.CurrentSha1Hash[:])
-
-	switch {
-	case currentHash.IsBlank(): // file is missing
-		result.WriteString(fmt.Sprintf("%s\n", r.FilePath))
-		result.WriteString("  - File is missing. Removed from index\n")
-	case currentHash.Data != indexedHash.Data: // file is corrupt
-		result.WriteString(fmt.Sprintf("%s\n", r.FilePath))
-		result.WriteString("  - File has changed since it was shared. Removed from Index\n")
-		result.WriteString(fmt.Sprintf("    Indexed Hash: %s\n", indexedHash.String()))
-		result.WriteString(fmt.Sprintf("    Current Hash: %s\n", currentHash.String()))
-	default:
-		// file is fine. Print nothing.
-	}
-
-	return result.String()
+	return r.ActionTaken
 }
 
 // CleanResponse contains basic information about files that had to be removed
@@ -62,14 +44,37 @@ func (m *Methods) Clean(req *CleanRequest, resp *CleanResponse) error {
 	}
 
 	for _, f := range files {
+		var execErr error // set non-nill if something prevented us from cleaning properly
 		currentHash, err := m.cat.Rehash(&f.Sha1Hash)
-		if err != nil && f.ProgressFile.Full() {
-			m.cat.UnshareFile(&f.Sha1Hash)
+
+		var actionTaken strings.Builder
+		actionTaken.WriteString(fmt.Sprintf("%s\n", f.FilePath))
+
+		switch {
+		case err != nil:
+			execErr = m.cat.UnshareFile(&f.Sha1Hash)
+			actionTaken.WriteString("  - File is missing. Removed from index\n")
+			actionTaken.WriteString(fmt.Sprintf("  - %v\n", err))
+		case *currentHash != f.Sha1Hash:
+			execErr = m.cat.UnshareFile(&f.Sha1Hash)
+			actionTaken.WriteString("  - File has changed since indexing. Removed from Index\n")
+			actionTaken.WriteString(fmt.Sprintf("    Indexed Hash: %s\n", f.Sha1Hash.String()))
+			actionTaken.WriteString(fmt.Sprintf("    Current Hash: %s\n", currentHash.String()))
+		case !f.ProgressFile.Full():
+			actionTaken.WriteString("  - Download in progress. Ignored\n")
+		default:
+			actionTaken.WriteString("  - Download complete & Hashes match. Ignored\n")
 		}
+
+		if execErr != nil {
+			return execErr
+		}
+
 		resp.Items = append(resp.Items, CleanResponseItem{
 			FilePath:        f.FilePath,
 			IndexedSha1Hash: f.Sha1Hash.Data,
 			CurrentSha1Hash: currentHash.Data,
+			ActionTaken:     actionTaken.String(),
 		})
 	}
 
