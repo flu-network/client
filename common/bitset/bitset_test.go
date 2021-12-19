@@ -108,72 +108,104 @@ func TestBitsetOperations(t *testing.T) {
 }
 
 func TestBitsetFillAndFull(t *testing.T) {
-	t.Run("Empty case", func(t *testing.T) {
-		b1 := NewBitset(0)
-		b1.Fill()
-		if !b1.Full() {
-			t.Fatalf("Even an empty filled bitset should be full")
-		}
-	})
 
-	t.Run("single int case", func(t *testing.T) {
-		b1 := NewBitset(0)
-		if !b1.Full() {
-			t.Fatalf("an empty bitset of size 0 should be full")
-		}
+	type testCase struct {
+		description  string
+		input        *Bitset
+		shouldBeFull bool
+		assertion    string
+	}
 
-		b1 = NewBitset(1)
-		b1.Set(0)
-		if !b1.Full() {
-			t.Fatalf("an full bitset of size 1 should be full")
-		}
+	cases := []*testCase{
+		{
+			description:  "Empty case",
+			input:        NewBitset(0),
+			shouldBeFull: true,
+			assertion:    "Even an empty filled bitset should be full",
+		},
+		{
+			description:  "single int case",
+			input:        NewBitset(1).Set(0),
+			shouldBeFull: true,
+			assertion:    "a full bitset of size 1 should be full",
+		},
+		{
+			description:  "single int case",
+			input:        NewBitset(1),
+			shouldBeFull: false,
+			assertion:    "a non-full bitset should not be full",
+		},
+		{
+			description:  "single int case",
+			input:        NewBitset(0).Set(15),
+			shouldBeFull: false,
+			assertion:    "a non-full bitset should not be full",
+		},
+		{
+			description:  "single int case",
+			input:        NewBitset(15).Fill(),
+			shouldBeFull: true,
+			assertion:    "a filled bitset should be full",
+		},
+	}
 
-		b1.Set(15)
-		if b1.Full() {
-			t.Fatalf("a non-full bitset should not be full")
+	for _, testcase := range cases {
+		if testcase.input.Full() != testcase.shouldBeFull {
+			t.Fatalf(testcase.assertion)
 		}
+	}
 
-		b1.Fill()
-		if !b1.Full() {
-			t.Fatalf("a filled bitset should be full")
+	// isTrueBelow returns the first unset index it finds, or the limit it is given if no such index
+	// is found
+	isTrueBelow := func(b *Bitset, limitExclusive uint64) uint64 {
+		for i := uint64(0); i < limitExclusive; i++ {
+			if b.Get(i) == false {
+				return i
+			}
 		}
-	})
+		return limitExclusive
+	}
 
 	t.Run("exact int case", func(t *testing.T) {
-		limit := 64
-		b1 := NewBitset(limit)
-		if b1.size != limit {
+		setSize := 64
+		b1 := NewBitset(setSize)
+		if b1.size != setSize {
 			t.Fatalf("Bitset initialized with wrong size\n")
 		}
 
 		b1.Fill()
-		prev := -1
-		for i := 0; i < limit; i++ {
-			if i%64 == 0 {
-				prev++
-			}
-			if b1.Get(uint64(i)) != true {
-				t.Fatalf("Expected filled bitset to actually be filled but %d was unset", i)
-			}
+		if falseIndex := isTrueBelow(b1, uint64(setSize)); falseIndex != uint64(setSize) {
+			t.Fatalf("Expected filled bitset to actually be filled but %d was unset", falseIndex)
 		}
 	})
 
 	t.Run("many int case", func(t *testing.T) {
-		limit := 123456
-		b1 := NewBitset(limit)
-		if b1.size != limit {
+		setSize := 123456
+		b1 := NewBitset(setSize)
+		if b1.size != setSize {
 			t.Fatalf("Bitset initialized with wrong size\n")
 		}
 
 		b1.Fill()
-		prev := -1
-		for i := 0; i < limit; i++ {
-			if i%64 == 0 {
-				prev++
-			}
-			if b1.Get(uint64(i)) != true {
-				t.Fatalf("Expected filled bitset to actually be filled but %d was unset", i)
-			}
+
+		if !b1.Full() {
+			t.Fatalf("Filled bitset should be full\n")
+		}
+
+		if falseIndex := isTrueBelow(b1, uint64(setSize)); falseIndex != uint64(setSize) {
+			t.Fatalf("Expected filled bitset to actually be filled but %d was unset", falseIndex)
+		}
+	})
+
+	t.Run("offset int case", func(t *testing.T) {
+		b1 := NewBitset(68)
+		b1.data = []uint64{
+			0b1111111111111111111111111111111111111111111111111111111111111111,
+			0b0000000000000000000000000000000000000000000000000000000000001111,
+		}
+
+		if falseIndex := isTrueBelow(b1, uint64(68)); falseIndex != uint64(68) {
+			t.Fatalf("Expected filled bitset to actually be filled but %d was unset", falseIndex)
 		}
 	})
 }

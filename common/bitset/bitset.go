@@ -3,13 +3,13 @@ package bitset
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/flu-network/client/common"
 )
 
 const wordSize = 64
-const allOn = ^uint64(0)
 
 // Bitset is simple bitset backed by a []uint64. The size of the bitset is unbounded and it will
 // grow as required to support any Set() operations invoked. Bitset provides no compression.
@@ -64,7 +64,7 @@ func (b *Bitset) Get(x uint64) bool {
 
 // Set sets the specified index to true. If the specified index is out of bounds, the bitset
 // expands to incorporate the given index. The bitset will never shrink once expanded.
-func (b *Bitset) Set(x uint64) {
+func (b *Bitset) Set(x uint64) *Bitset {
 	offset := int(x) / wordSize
 	if offset > len(b.data)-1 {
 		diff := offset - (len(b.data) - 1)
@@ -72,6 +72,7 @@ func (b *Bitset) Set(x uint64) {
 	}
 	b.data[x/wordSize] |= (1 << (x % wordSize))
 	b.size = max(b.size, int(x)+1)
+	return b
 }
 
 // Fill sets all items between 0:size to true. Returns itself for syntactic convenience
@@ -82,7 +83,7 @@ func (b *Bitset) Fill() *Bitset {
 
 	maxOffset := (b.size - 1) / wordSize
 	for i := 0; i < maxOffset; i++ {
-		b.data[i] = allOn
+		b.data[i] = math.MaxUint64
 	}
 
 	lastIndex := (b.size - 1) % wordSize
@@ -98,7 +99,7 @@ func (b *Bitset) Full() bool {
 
 	maxOffset := (b.size - 1) / wordSize
 	for i := 0; i < maxOffset; i++ {
-		if b.data[i] != allOn {
+		if b.data[i] != math.MaxUint64 {
 			return false
 		}
 	}
@@ -223,26 +224,10 @@ func (b *Bitset) UnfilledItems(count int) []uint16 {
 // Print returns a 0/1-formatted string representation of the underlying bitset
 func (b *Bitset) Print() string {
 	result := strings.Builder{}
-
+	result.WriteString(fmt.Sprintf("size: %d\n", b.size))
 	for segmentIndex := range b.data {
-		for i := uint64(0); i < uint64(64); i++ {
-			if (uint64(segmentIndex)*64 + i) < uint64(b.size) {
-				if !b.Get(i) {
-					result.WriteRune('0')
-				} else {
-					result.WriteRune('1')
-				}
-			} else {
-				if !b.Get(i) {
-					result.WriteRune('º')
-				} else {
-					result.WriteRune('|')
-				}
-			}
-		}
-		result.WriteRune('\n')
+		result.WriteString(fmt.Sprintf("%064b\n", b.data[segmentIndex]))
 	}
-
 	return result.String()
 }
 
