@@ -172,7 +172,7 @@ func (c *Cat) Rehash(hash *common.Sha1Hash) (*common.Sha1Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	currentHash, err := hashFile(rec.FilePath)
+	currentHash, err := common.HashFile(rec.FilePath)
 	if err != nil {
 		return (&common.Sha1Hash{}).Blank(), err
 	}

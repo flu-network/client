@@ -1,8 +1,6 @@
 package catalogue
 
 import (
-	"bufio"
-	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
@@ -99,7 +97,7 @@ func generateIndexRecordForFile(path string) (*indexRecord, error) {
 		return nil, err
 	}
 
-	hash, err := hashFile(cleanPath)
+	hash, err := common.HashFile(cleanPath)
 	if err != nil {
 		return nil, err
 	}
@@ -112,23 +110,6 @@ func generateIndexRecordForFile(path string) (*indexRecord, error) {
 		ChunkSize:    defaultChunkSize,
 	}, nil
 
-}
-
-// hashFile returns a 20-array slice representing the sha1 hash of the file's contents or an error.
-// TODO: come up with some sort of async/progress-bar method because at 500mbps of disk throughput
-// this could take 10 seconds for a 5GB file, and 1.5 minutes for a 50GB file.
-func hashFile(path string) (*common.Sha1Hash, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	s, h := bufio.NewScanner(f), sha1.New()
-	for s.Scan() {
-		h.Write(s.Bytes())
-	}
-
-	return (&common.Sha1Hash{}).FromSlice(h.Sum(nil)), nil
 }
 
 // toJSON returns an indexRecordJSON, which can natively be marshalled into JSON

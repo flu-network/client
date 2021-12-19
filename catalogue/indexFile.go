@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/flu-network/client/common"
@@ -151,6 +152,27 @@ func (ind *indexFile) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// Sprint returns a pretty-printed string-representation of the in-memory indexFile
+func (ind *indexFile) Sprint() string {
+	var result strings.Builder
+	// pid         int
+	// lastTouched int64 // should be updated regularly by the owner
+	// index       map[common.Sha1Hash]*indexRecord
+	// dataDir     string
+
+	result.WriteString(fmt.Sprintf("pid: %d\n", ind.pid))
+	result.WriteString(fmt.Sprintf("lastTouched: %d\n", ind.lastTouched))
+	result.WriteString(fmt.Sprintf("dataDir: %s\n", ind.dataDir))
+
+	for k, rec := range ind.index {
+		result.WriteString(fmt.Sprintf("  %v\n", k))
+		result.WriteString(fmt.Sprintf("    %s: %s\n", "FilePath", rec.FilePath))
+		result.WriteString(fmt.Sprintf("    %s: %s\n", "Sha1Hash", rec.Sha1Hash.String()))
+	}
+
+	return result.String()
 }
 
 // indexFileJSON is a private intermediary representation of an indexFile for JSON encoding
