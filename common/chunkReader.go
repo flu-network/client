@@ -62,15 +62,20 @@ func NewChunkReader(reader *io.SectionReader) *ChunkReader {
 		bytesRead, err := reader.Read(hashBuffer)
 		if bytesRead > 0 {
 			size += bytesRead
-			hash.Write(hashBuffer[:bytesRead])
+			wrote, err := hash.Write(hashBuffer[:bytesRead])
+			switch {
+			case err != nil && err != io.EOF:
+				panic(err)
+			case wrote != bytesRead:
+				panic(fmt.Errorf("internal error writing to hash"))
+			default:
+				// do nothing
+			}
 		}
 
 		if err == io.EOF {
 			break
-		} else if err != nil {
-			panic(err)
 		}
-		// else do nothing
 	}
 
 	reader.Seek(0, 0)
