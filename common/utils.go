@@ -1,8 +1,9 @@
 package common
 
 import (
-	"bufio"
 	"crypto/sha1"
+	"fmt"
+	"io"
 	"os"
 )
 
@@ -14,11 +15,30 @@ func HashFile(path string) (*Sha1Hash, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
-	s, h := bufio.NewScanner(f), sha1.New()
-	for s.Scan() {
-		h.Write(s.Bytes())
+	hash := sha1.New()
+	hashBuffer := make([]byte, 4096) // A reasonably-recent mac's block size
+
+	for {
+		bytesRead, err := f.Read(hashBuffer)
+		if bytesRead > 0 {
+			wrote, err := hash.Write(hashBuffer[:bytesRead])
+			if err != nil {
+				return nil, err
+			}
+			if wrote != bytesRead {
+				return nil, fmt.Errorf("internal error writing to hash")
+			}
+		}
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		// else do nothing
 	}
 
-	return (&Sha1Hash{}).FromSlice(h.Sum(nil)), nil
+	return (&Sha1Hash{}).FromSlice(hash.Sum(nil)), nil
 }
