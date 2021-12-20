@@ -28,15 +28,22 @@ Indexes, hosts and downloads files over LANs
 - use scripts `runRemoteClient` and `runRemoteDaemon` in `../scripts`
 
 ### TODO:
-- implement transfer! This is it!
-    - Pick up by running `scripts/runDownloadTest.sh`
-    - Have the receiver stream its chunks to disk
-    - Have the sender maintain a set of 'unacked' messages to retransmit at the end
-        - unacked messages should have a data offset and data length
-    - wrap the chunk transmission up so it can run concurrently
-        - Use those fancy exclusive-range things you wrote in bitset to do this
+-- IMMEDIATE CONCERNS --
+- Find out why single-chunk downloads are so slow
+    -  sudo ./runDownloadTest.sh     # only sets up daemons
+    -  sudo ./client get [sha1 of file]
+    - May require first packaging connection.go and parts of startDownload/startUpload so we can
+      pprof and benchmark easily
+- Make downloads happen in parallel. Fix the massive hack in serverStartDownload.go
+
+-- General ugliness -- 
+- downloading a file overwrites (without first deleting) the extant file at that path in ~/Downloads
+  . This leads to some hella confusing behavior. Delete the file first!
+- Universally replace []uint16 with []range wherever possible
+- Have the sender maintain a set of 'unacked' messages to retransmit at the end
 - Chunk size needs to be globally constant... 🤦‍♂️
 - Use merkel trees to 'patch' the chunks if they don't match
+- have the receiver close the connection instead of *relying* on a sender-side timeout
 
 
 ### Local Dev notes:

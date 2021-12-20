@@ -112,15 +112,15 @@ func (sc *SenderConnection) kickstart(
 		Data:   make([]byte, 1024),
 	}
 
-	fmt.Printf("Beginning upload of data %v\n", hash)
-
 	copy(firstPacket.Data[:20], hash.Slice())
 	binary.BigEndian.PutUint32(firstPacket.Data[20:24], uint32(size))
 
 	actualDataSpace := firstPacket.Data[24:]
 	byteCount, _, err := sc.reader.Read(actualDataSpace)
 
-	if err != nil {
+	if err != nil && err != io.EOF {
+		// EOF is fine because the goroutine handling the error will exit when it tries to read
+		// again and gets its own EOF with 0 bytes of data
 		return err
 	}
 

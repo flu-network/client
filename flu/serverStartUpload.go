@@ -40,8 +40,7 @@ func (s *Server) StartUpload(
 	}
 
 	if _, ok := s.uploads[key]; !ok {
-		senderConn := NewSenderConnection(reader, msg.WindowCap, conn, returnAddr)
-		s.uploads[key] = senderConn
+		s.uploads[key] = NewSenderConnection(reader, msg.WindowCap, conn, returnAddr)
 	}
 
 	return s.uploads[key].kickstart(&reader.Hash, int64(reader.Size))
