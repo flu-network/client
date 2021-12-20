@@ -44,6 +44,7 @@ Indexes, hosts and downloads files over LANs
 - Chunk size needs to be globally constant... 🤦‍♂️
 - Use merkel trees to 'patch' the chunks if they don't match
 - have the receiver close the connection instead of *relying* on a sender-side timeout
+- the catalogue exports a progressfile which includes a mutex. Bleh... Fix it. Somehow...
 
 
 ### Local Dev notes:

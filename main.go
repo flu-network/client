@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
+	"net/http"
 	"net/rpc"
 	"os"
 	"time"
@@ -11,6 +13,8 @@ import (
 	"github.com/flu-network/client/catalogue"
 	"github.com/flu-network/client/cli"
 	"github.com/flu-network/client/flu"
+
+	_ "net/http/pprof"
 )
 
 // Defaults. Can be overridden by user
@@ -24,6 +28,12 @@ func main() {
 	flag.Parse()
 
 	if *daemonMode {
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+			// head to http://localhost:6060/debug/pprof/ to get started
+			// go tool pprof client http://localhost:6060/debug/pprof/profile
+			// https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/
+		}()
 		startDaemon()
 	} else {
 		args := os.Args[1:] // first arg is pathToBinary. Should be ignored in a CLI.
