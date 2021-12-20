@@ -55,13 +55,13 @@ func (m *Methods) Clean(req *CleanRequest, resp *CleanResponse) error {
 			execErr = m.cat.UnshareFile(&f.Sha1Hash)
 			actionTaken.WriteString("  - File is missing. Removed from index\n")
 			actionTaken.WriteString(fmt.Sprintf("  - %v\n", err))
+		case !f.ProgressFile.Full():
+			actionTaken.WriteString("  - Download in progress. Ignored\n")
 		case *currentHash != f.Sha1Hash:
 			execErr = m.cat.UnshareFile(&f.Sha1Hash)
 			actionTaken.WriteString("  - File has changed since indexing. Removed from Index\n")
 			actionTaken.WriteString(fmt.Sprintf("    Indexed Hash: %s\n", f.Sha1Hash.String()))
 			actionTaken.WriteString(fmt.Sprintf("    Current Hash: %s\n", currentHash.String()))
-		case !f.ProgressFile.Full():
-			actionTaken.WriteString("  - Download in progress. Ignored\n")
 		default:
 			actionTaken.WriteString("  - Download complete & Hashes match. Ignored\n")
 		}
