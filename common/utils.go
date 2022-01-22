@@ -42,3 +42,9 @@ func HashFile(path string) (*Sha1Hash, error) {
 
 	return (&Sha1Hash{}).FromSlice(hash.Sum(nil)), nil
 }
+
+func failHard(err error) {
+	if err != nil {
+		panic(err)
+	}
+}

@@ -68,9 +68,3 @@ func genStableRandomishData(sizeInBytes int, filePath string) {
 	dest := filepath.Clean(filePath)
 	failHard(os.WriteFile(dest, data, 0777))
 }
-
-func failHard(err error) {
-	if err != nil {
-		panic(err)
-	}
-}

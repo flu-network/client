@@ -210,6 +210,7 @@ func (c *Cat) FileComplete(hash *common.Sha1Hash) bool {
 	return ir.ProgressFile.Full()
 }
 
+// MissingChunks returns a list of ranges of missing chunks for the given hash
 func (c *Cat) MissingChunks(hash *common.Sha1Hash, maxCount int) []common.Range {
 	c.lock.Lock()
 	defer c.lock.Unlock()
