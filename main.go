@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"path"
 	"time"
 
 	"github.com/flu-network/client/catalogue"
@@ -18,10 +19,10 @@ import (
 )
 
 // Defaults. Can be overridden by user
-const catalogueDir = "/usr/local/var/flu-network/catalogue" // TODO: make cross-platform
-const downloadsDir = "/Users/tubby/Downloads"
-const sockaddr = "/tmp/flu-network.sock" // for cli communication
-const udpPort = 61696                    // port "f100" in hex
+const downloadsDirSuffix = "/.flu-network/downloads"
+const catalogueDirSuffix = "/.flu-network/catalogue" // TODO: make cross-platform
+const sockaddr = "/tmp/flu-network.sock"             // for cli communication
+const udpPort = 61696                                // port "f100" in hex
 
 func main() {
 	daemonMode := flag.Bool("d", false, "-d")
@@ -44,7 +45,12 @@ func main() {
 }
 
 func startDaemon() {
-	cat, err := catalogue.NewCat(catalogueDir, downloadsDir)
+	homeDir, err := os.UserHomeDir()
+	failHard(err)
+	calatogueDir := path.Join(homeDir, catalogueDirSuffix)
+	downloadsDir := path.Join(homeDir, downloadsDirSuffix)
+
+	cat, err := catalogue.NewCat(calatogueDir, downloadsDir)
 	failHard(err)
 	failHard(cat.Init())
 	fluServer := flu.NewServer(udpPort, cat)

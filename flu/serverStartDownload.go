@@ -134,7 +134,7 @@ func (s *Server) downloadChunk(ip [4]byte, port uint16, sha1Hash *common.Sha1Has
 				}
 				downloadTime := float64(time.Since(start).Seconds())
 				speed := 4.0 / downloadTime
-				fmt.Printf("Chunk %d complete at %2f mbps\n", chunk, speed)
+				fmt.Printf("Chunk %d complete at %.2f mbps\n", chunk, speed)
 				break
 			}
 		}
