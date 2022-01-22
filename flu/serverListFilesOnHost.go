@@ -91,12 +91,13 @@ func (s *Server) RespondToListFilesOnHost(
 	}
 	for i, f := range files {
 		_, fileName := path.Split(f.FilePath)
+		hash := (&common.Sha1Hash{}).FromSlice(f.Sha1Hash.Slice())
 		resp.Files[i] = messages.ListFilesEntry{
 			SizeInBytes:      uint64(f.SizeInBytes),
 			ChunkCount:       uint32(f.ProgressFile.Size()),
 			ChunkSizeInBytes: uint32(f.ChunkSize),
 			ChunksDownloaded: uint32(f.ProgressFile.Count()),
-			Sha1Hash:         &f.Sha1Hash,
+			Sha1Hash:         hash,
 			FileName:         fileName,
 		}
 	}
