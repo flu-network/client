@@ -9,11 +9,11 @@ import (
 type OpenConnectionRequest struct {
 	Sha1Hash  *common.Sha1Hash // which file we want
 	Chunk     uint16           // which chunk of that file we want
-	WindowCap uint8            // how many unacked requests we'll allow
+	WindowCap uint16           // how many unacked requests we'll allow
 }
 
 func (r *OpenConnectionRequest) Serialize() []byte {
-	result := make([]byte, 24)
+	result := make([]byte, 32)
 
 	// message type
 	result[0] = openLineRequest
@@ -25,7 +25,7 @@ func (r *OpenConnectionRequest) Serialize() []byte {
 	binary.BigEndian.PutUint16(result[21:23], r.Chunk)
 
 	// window cap
-	result[23] = r.WindowCap
+	binary.BigEndian.PutUint16(result[23:32], r.WindowCap)
 
 	return result
 }

@@ -60,7 +60,7 @@ func Parse(data []byte) (msg Message, err error) {
 	case openLineRequest:
 		sha1Hash := reader.readSha1Hash()
 		chunk := reader.readUint16()
-		cap := reader.readByte()
+		cap := reader.readUint16()
 		return &OpenConnectionRequest{
 			Sha1Hash:  sha1Hash,
 			Chunk:     chunk,

@@ -46,11 +46,11 @@ func DialPeer(ip [4]byte, port uint16, hash *common.Sha1Hash, chunk uint16) (*Re
 		hash:          nil,
 		bytesReceived: 0,
 		buffer:        nil,
-		windowCap:     10,
+		windowCap:     1024,
 		outChan:       make(chan *messages.DataPacket, 10),
 	}
 
-	kickstartMsg := messages.OpenConnectionRequest{Sha1Hash: hash, Chunk: chunk, WindowCap: 10}
+	kickstartMsg := messages.OpenConnectionRequest{Sha1Hash: hash, Chunk: chunk, WindowCap: 1024}
 	result.conn.Write(kickstartMsg.Serialize())
 
 	go func() {
@@ -74,8 +74,8 @@ func DialPeer(ip [4]byte, port uint16, hash *common.Sha1Hash, chunk uint16) (*Re
 
 type SenderConnection struct {
 	reader     *common.ChunkReader
-	windowSize uint8
-	windowCap  uint8
+	windowSize uint16
+	windowCap  uint16
 	conn       *net.UDPConn
 	addr       *net.UDPAddr
 	packetChan chan messages.DataPacketAck
@@ -83,7 +83,7 @@ type SenderConnection struct {
 }
 
 func NewSenderConnection(reader *common.ChunkReader,
-	windowCap uint8,
+	windowCap uint16,
 	conn *net.UDPConn,
 	addr *net.UDPAddr,
 ) *SenderConnection {
@@ -137,7 +137,10 @@ func (sc *SenderConnection) kickstart(
 		for {
 			select {
 			case ack := <-sc.packetChan:
-				sc.kick(&ack) // TODO: Do something with these errors
+				err := sc.kick(ack)
+				if err != nil {
+					panic(err) // TODO: Do something with these errors
+				}
 			case <-sc.cancelChan:
 				return
 			}
@@ -151,14 +154,17 @@ func (sc *SenderConnection) terminate() {
 	sc.cancelChan <- struct{}{}
 }
 
-// kick receives an ack from the client and responds accordingly
-func (sc *SenderConnection) kick(ack *messages.DataPacketAck) error {
+// kick receives an ack from the client and responds accordingly. Passed by value because acks are
+// << 64 bits
+func (sc *SenderConnection) kick(ack messages.DataPacketAck) error {
 	sc.windowSize--
 
-	for sc.windowSize < sc.windowCap {
-		packet := messages.DataPacket{Offset: 0, Data: make([]byte, 1024)}
+	packet := messages.DataPacket{Offset: 0, Data: nil}
+	packetBuffer := make([]byte, 1024)
 
-		byteCount, offset, err := sc.reader.Read(packet.Data)
+	for sc.windowSize < sc.windowCap {
+
+		byteCount, offset, err := sc.reader.Read(packetBuffer)
 
 		if err == io.EOF {
 			defer sc.terminate() // make this the last message
@@ -166,7 +172,7 @@ func (sc *SenderConnection) kick(ack *messages.DataPacketAck) error {
 			return err
 		}
 
-		packet.Data = packet.Data[:byteCount] // clip to number of bytes read
+		packet.Data = packetBuffer[:byteCount] // clip to number of bytes read
 		packet.Offset = offset
 
 		_, err = sc.conn.WriteTo(packet.Serialize(), sc.addr)
