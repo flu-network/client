@@ -45,9 +45,9 @@ func (m *Methods) List(req *ListRequest, resp *ListResponse) error {
 				FilePath:         rec.FilePath,
 				SizeInBytes:      rec.SizeInBytes,
 				Sha1Hash:         *rec.Sha1Hash.Array(),
-				ChunkCount:       rec.ProgressFile.Size(),
+				ChunkCount:       rec.Progress.Size(),
 				ChunkSizeInBytes: rec.ChunkSize,
-				ChunksDownloaded: rec.ProgressFile.Count(),
+				ChunksDownloaded: rec.Progress.Count(),
 			}
 		}
 	} else {

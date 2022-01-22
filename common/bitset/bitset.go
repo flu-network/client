@@ -272,6 +272,13 @@ func Deserialize(data []byte) (*Bitset, error) {
 	}, nil
 }
 
+// Copy returns a copy of the bitset. Mutating the copy will not affect the original
+func (b *Bitset) Copy() *Bitset {
+	data := make([]uint64, len(b.data), cap(b.data))
+	copy(data, b.data)
+	return &Bitset{data: data, size: b.size}
+}
+
 /*
 Private utilities
 */

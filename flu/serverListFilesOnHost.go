@@ -94,9 +94,9 @@ func (s *Server) RespondToListFilesOnHost(
 		hash := (&common.Sha1Hash{}).FromSlice(f.Sha1Hash.Slice())
 		resp.Files[i] = messages.ListFilesEntry{
 			SizeInBytes:      uint64(f.SizeInBytes),
-			ChunkCount:       uint32(f.ProgressFile.Size()),
+			ChunkCount:       uint32(f.Progress.Size()),
 			ChunkSizeInBytes: uint32(f.ChunkSize),
-			ChunksDownloaded: uint32(f.ProgressFile.Count()),
+			ChunksDownloaded: uint32(f.Progress.Count()),
 			Sha1Hash:         hash,
 			FileName:         fileName,
 		}

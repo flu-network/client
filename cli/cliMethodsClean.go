@@ -55,7 +55,7 @@ func (m *Methods) Clean(req *CleanRequest, resp *CleanResponse) error {
 			execErr = m.cat.UnshareFile(&f.Sha1Hash)
 			actionTaken.WriteString("  - File is missing. Removed from index\n")
 			actionTaken.WriteString(fmt.Sprintf("  - %v\n", err))
-		case !f.ProgressFile.Full():
+		case !f.Progress.Full():
 			actionTaken.WriteString("  - Download in progress. Ignored\n")
 		case *currentHash != f.Sha1Hash:
 			execErr = m.cat.UnshareFile(&f.Sha1Hash)

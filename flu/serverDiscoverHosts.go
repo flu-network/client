@@ -69,9 +69,9 @@ func (s *Server) RespondToDiscoverHosts(
 	if !req.Sha1Hash.IsBlank() {
 		if ir, err := s.cat.Contains(&req.Sha1Hash); err == nil {
 			if len(req.Chunks) > 0 { // if they asked for chunks
-				resp.Chunks = ir.ProgressFile.Overlap(req.Chunks) // return overlap
+				resp.Chunks = ir.Progress.Overlap(req.Chunks) // return overlap
 			} else {
-				resp.Chunks = ir.ProgressFile.Ranges() // return all ranges
+				resp.Chunks = ir.Progress.Ranges() // return all ranges
 			}
 		}
 	}

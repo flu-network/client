@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/flu-network/client/common"
+	"github.com/flu-network/client/common/bitset"
 )
 
 const defaultChunkSize = int(1 << 22) // 4mb in bytes
@@ -30,21 +31,21 @@ type indexRecord struct {
 // the underlying object it represents. For strong guarantees of consistency, use the appropriate
 // method on the catalogue.
 type IndexRecordExport struct {
-	FilePath     string
-	SizeInBytes  int64
-	Sha1Hash     common.Sha1Hash
-	ProgressFile progressFile
-	ChunkSize    int
+	FilePath    string
+	SizeInBytes int64
+	Sha1Hash    common.Sha1Hash
+	Progress    bitset.Bitset
+	ChunkSize   int
 }
 
 // export returns an IndexRecordExport, which is safe for consumption outside of the catalogue
 func (ir *indexRecord) export() *IndexRecordExport {
 	return &IndexRecordExport{
-		FilePath:     ir.FilePath,
-		SizeInBytes:  ir.SizeInBytes,
-		Sha1Hash:     ir.Sha1Hash,
-		ProgressFile: *ir.ProgressFile, // TODO: export a plain bitset instead of this fanciness
-		ChunkSize:    ir.ChunkSize,
+		FilePath:    ir.FilePath,
+		SizeInBytes: ir.SizeInBytes,
+		Sha1Hash:    ir.Sha1Hash,
+		Progress:    *ir.ProgressFile.Export(),
+		ChunkSize:   ir.ChunkSize,
 	}
 }
 

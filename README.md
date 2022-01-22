@@ -29,12 +29,9 @@ Indexes, hosts and downloads files over LANs
 
 ### TODO:
 -- IMMEDIATE CONCERNS --
-- Find out why single-chunk downloads are so slow
-    -  sudo ./runDownloadTest.sh     # only sets up daemons
-    -  sudo ./client get [sha1 of file]
-    - May require first packaging connection.go and parts of startDownload/startUpload so we can
-      pprof and benchmark easily
 - Make downloads happen in parallel. Fix the massive hack in serverStartDownload.go
+- Make downloads start automatically when the daemon restarts
+- Make downloads cancellable (using 'context'?)
 
 -- General ugliness -- 
 - downloading a file overwrites (without first deleting) the extant file at that path in ~/Downloads
@@ -44,7 +41,6 @@ Indexes, hosts and downloads files over LANs
 - Chunk size needs to be globally constant... 🤦‍♂️
 - Use merkel trees to 'patch' the chunks if they don't match
 - have the receiver close the connection instead of *relying* on a sender-side timeout
-- the catalogue exports a progressfile which includes a mutex. Bleh... Fix it. Somehow...
 
 
 ### Local Dev notes:

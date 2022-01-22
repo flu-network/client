@@ -69,6 +69,10 @@ func (p *progressFile) UnfilledItems(count int) []uint16 {
 	return p.progress.UnfilledItems(count)
 }
 
+func (p *progressFile) Export() *bitset.Bitset {
+	return p.progress.Copy()
+}
+
 // newProgressFile returns a new progressFile for the given IndexRecord, assuming the IndexRecord
 // is intact and preset in full.
 func newProgressFile(record *indexRecord, dataDir string) *progressFile {
